@@ -22,7 +22,7 @@ const T=THREE;
 const R=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);
 R.outputEncoding=T.sRGBEncoding;R.toneMapping=T.ACESFilmicToneMapping;R.toneMappingExposure=1.12;
-R.physicallyCorrectLights=true;R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;
+R.physicallyCorrectLights=false;R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;
 document.body.appendChild(R.domElement);
 const S=new T.Scene(),FOG=new T.Color(0xcbdce9);S.background=FOG;S.fog=new T.FogExp2(FOG,.00145);
 const C=new T.PerspectiveCamera(78,innerWidth/innerHeight,.1,3500);C.rotation.order='YXZ';
@@ -47,7 +47,7 @@ void main(){
  vec3 d=normalize(v);float h=max(d.y,0.0);
  vec3 horizon=vec3(.77,.84,.89),zenith=vec3(.13,.34,.57);
  vec3 c=mix(horizon,zenith,pow(h,.52));
- float sunDot=max(dot(d,normalize(vec3(-.42,.48,.77))),0.0);
+ float sunDot=max(dot(d,normalize(vec3(-.49,.71,-.38))),0.0);
  c+=vec3(1.0,.77,.49)*pow(sunDot,320.0)*2.4;
  c+=vec3(1.0,.83,.64)*pow(sunDot,24.0)*.34;
  vec2 cuv=d.xz/(max(d.y+.20,.12))*.10;
@@ -188,7 +188,7 @@ for(const[k,c]of chunks)if(Math.abs(c.cx-pcx)>CR+1||Math.abs(c.cz-pcz)>CR+1){S.r
 /* water */
 const waterGeometry=new T.PlaneGeometry(1800,1800,96,96);
 const waterMaterial=new T.ShaderMaterial({
- uniforms:{time:{value:0},sunDirection:{value:new T.Vector3(-.42,.48,.77).normalize()}},
+ uniforms:{time:{value:0},sunDirection:{value:new T.Vector3(-.49,.71,-.38).normalize()}},
  vertexShader:`
  uniform float time;varying vec3 vWorld;varying vec3 vNormal;varying vec2 vUv;
  void main(){
@@ -326,7 +326,7 @@ C.fov=78+Math.min(14,Math.hypot(vel.x,vel.z)*.35);C.updateProjectionMatrix();
 sky.position.copy(C.position);far.position.copy(C.position);
 sun.position.set(pos.x-180,260,pos.z-140);sun.target.position.set(pos.x,0,pos.z);
 water.position.set(Math.round(pos.x/64)*64,-12,Math.round(pos.z/64)*64);waterMaterial.uniforms.time.value=t;
-waterMaterial.uniforms.sunDirection.value.set(-.42,.48,.77).normalize();
+waterMaterial.uniforms.sunDirection.value.set(-.49,.71,-.38).normalize();
 const P=petG.attributes.position.array;for(let i=0;i<PN;i++){const j=i*3;P[j]+=Math.sin(t+i)*dt*.6+dt*1.2;P[j+1]-=dt*(.7+(i%5)*.12);P[j+2]+=Math.cos(t*.8+i)*dt*.5;
 for(let a=0;a<3;a++){const c=[C.position.x,C.position.y,C.position.z][a];if(P[j+a]-c>30)P[j+a]-=60;else if(P[j+a]-c<-30)P[j+a]+=60}}petG.attributes.position.needsUpdate=true;
 if(frame%8===0)hud.textContent=`x ${pos.x|0}  z ${pos.z|0}  alt ${pos.y.toFixed(0)}m  ${fly?'FLY':''}  photoreal terrain  chunks ${chunks.size}  ${(Math.hypot(pos.x,pos.z)/1000).toFixed(2)} km`;
