@@ -20,7 +20,7 @@ canvas{display:block}
 <script>
 const T=THREE;
 const R=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);
+R.setPixelRatio(Math.min(devicePixelRatio,1.75));R.setSize(innerWidth,innerHeight);
 R.outputEncoding=T.sRGBEncoding;R.toneMapping=T.ACESFilmicToneMapping;R.toneMappingExposure=1.12;
 R.physicallyCorrectLights=false;R.shadowMap.enabled=true;R.shadowMap.type=T.PCFSoftShadowMap;
 document.body.appendChild(R.domElement);
@@ -71,63 +71,59 @@ const fbm=(x,z,o)=>{let s=0,a=.5;for(let i=0;i<o;i++){s+=a*vn(x,z);x=x*2.03+17.1
 const hf=(x,z)=>{const b=fbm(x*.004,z*.004,4),m=Math.max(0,fbm(x*.0013+31,z*.0013+7,3)-.5)*2.4;return(b-.48)*34+m*m*260+fbm(x*.03,z*.03,2)*3-3};
 const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 /* Seamless-ish, multi-scale procedural ground texture; no external texture files. */
-function groundTextureSet(){
- const size=512,albedo=document.createElement('canvas'),height=document.createElement('canvas');
- albedo.width=albedo.height=height.width=height.height=size;
- const ac=albedo.getContext('2d'),hc=height.getContext('2d');
- const ai=ac.createImageData(size,size),hi=hc.createImageData(size,size);
- let seed=2463534242;const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
- for(let y=0;y<size;y++)for(let x=0;x<size;x++){
-   const i=(y*size+x)*4,grain=rnd()-.5;
-   const broad=Math.sin(x*.027)*Math.cos(y*.031)*.5+Math.sin((x+y)*.011)*.3+Math.cos((x-y)*.018)*.2;
-   const fleck=rnd();
-   const dirt=Math.max(0,Math.min(1,(broad+grain*.9+.25)*.68));
-   ai[i]=Math.max(22,Math.min(255,72+broad*18+grain*27+(fleck>.992?40:0)));
-   ai[i+1]=Math.max(28,Math.min(255,111+broad*24+grain*31-dirt*22));
-   ai[i+2]=Math.max(17,Math.min(255,48+broad*13+grain*19+dirt*8));
-   ai[i+3]=255;
-   const bump=128+broad*25+grain*48+(fleck>.985?25:0);
-   hi.data[i]=hi.data[i+1]=hi.data[i+2]=Math.max(0,Math.min(255,bump));hi.data[i+3]=255;
- }
- ac.putImageData(ai,0,0);hc.putImageData(hi,0,0);
- const map=new T.CanvasTexture(albedo),bump=new T.CanvasTexture(height);
- map.wrapS=map.wrapT=bump.wrapS=bump.wrapT=T.RepeatWrapping;
- map.encoding=T.sRGBEncoding;map.anisotropy=R.capabilities.getMaxAnisotropy();
- bump.encoding=T.LinearEncoding;bump.anisotropy=R.capabilities.getMaxAnisotropy();
- map.generateMipmaps=bump.generateMipmaps=true;
- return {map,bump};
-}
-const groundMaps=groundTextureSet();
-const CS=64,SG=48,CR=6,chunks=new Map();
-const tmat=new T.MeshStandardMaterial({map:groundMaps.map,bumpMap:groundMaps.bump,bumpScale:.13,vertexColors:true,roughness:.96,metalness:0});
-const cylB=new T.CylinderGeometry(1,1,1,10).translate(0,.5,0),trunkG=new T.CylinderGeometry(.7,1,1,8).translate(0,.5,0),canG=new T.SphereGeometry(1,12,10),boxG=new T.BoxGeometry(1,1,1),sph=new T.SphereGeometry(1,12,8);
-const trunkM=new T.MeshStandardMaterial({color:0x705044,roughness:1}),canM=new T.MeshStandardMaterial({color:0xffffff,roughness:.94}),glowM=new T.MeshStandardMaterial({color:0xffd58a,emissive:0xffb94e,emissiveIntensity:1.2,roughness:.3});
-const grassG=new T.ConeGeometry(.12,.52,4);grassG.translate(0,.24,0);
-const grassM=new T.MeshStandardMaterial({color:0xffffff,roughness:1,vertexColors:true,side:T.DoubleSide});
-const rockG=new T.DodecahedronGeometry(1,0),rockM=new T.MeshStandardMaterial({color:0x85847b,roughness:1,flatShading:true});
+function hashGrid(x,y,cells,seed){x=((x%cells)+cells)%cells;y=((y%cells)+cells)%cells;let n=(Math.imul(x+(seed|0),374761393)+Math.imul(y+(seed*3|0),668265287))|0;n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295}
+function periodicNoise(u,v,cells,seed){const x=((u%1)+1)%1*cells,y=((v%1)+1)%1*cells,ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy),a=hashGrid(ix,iy,cells,seed),b=hashGrid(ix+1,iy,cells,seed),c=hashGrid(ix,iy+1,cells,seed),d=hashGrid(ix+1,iy+1,cells,seed),n0=a+(b-a)*sx,n1=c+(d-c)*sx;return n0+(n1-n0)*sy}
+function tileFbm(u,v,seed){return periodicNoise(u,v,4,seed)*.32+periodicNoise(u,v,8,seed+1)*.24+periodicNoise(u,v,16,seed+2)*.18+periodicNoise(u,v,32,seed+3)*.12+periodicNoise(u,v,64,seed+4)*.09+periodicNoise(u,v,128,seed+5)*.05}
+function setupTexture(tex,encoding){tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.encoding=encoding;tex.anisotropy=Math.min(8,R.capabilities.getMaxAnisotropy());tex.generateMipmaps=true;tex.minFilter=T.LinearMipmapLinearFilter;tex.magFilter=T.LinearFilter;tex.needsUpdate=true;return tex}
+function biomeTexture(kind,size=256){
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d'),img=ctx.createImageData(size,size),seed={grass:11,rock:23,sand:37,snow:53}[kind];
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size,v=y/size,i=(y*size+x)*4,n=tileFbm(u,v,seed),fine=periodicNoise(u,v,192,seed+7),grain=periodicNoise(u,v,256,seed+19),vein=Math.max(0,1-Math.abs(periodicNoise(u,v,38,seed+31)-.5)*22);let rr,gg,bb;
+ if(kind==='grass'){const patch=Math.max(0,Math.min(1,(n-.43)*2.9));rr=33+n*27+fine*8+grain*5;gg=66+n*65+fine*13+patch*10;bb=24+n*23+fine*7}
+ else if(kind==='rock'){const strata=Math.sin(v*6.2831853*11+Math.sin(u*6.2831853*5)*1.5)*5;rr=62+n*66+fine*13+strata+vein*9;gg=61+n*63+fine*13+strata+vein*8;bb=57+n*59+fine*12+strata+vein*7}
+ else if(kind==='sand'){rr=123+n*42+fine*11+grain*8;gg=102+n*40+fine*10+grain*7;bb=72+n*33+fine*8+grain*6}
+ else{const grit=(fine-.5)*15;rr=191+n*48+grit;gg=205+n*39+grit;bb=218+n*32+grit}
+ img.data[i]=Math.max(0,Math.min(255,rr));img.data[i+1]=Math.max(0,Math.min(255,gg));img.data[i+2]=Math.max(0,Math.min(255,bb));img.data[i+3]=255}
+ ctx.putImageData(img,0,0);return setupTexture(new T.CanvasTexture(canvas),T.SRGBEncoding)}
+function detailTextureSet(size=512){
+ const hc=document.createElement('canvas'),rc=document.createElement('canvas');hc.width=hc.height=rc.width=rc.height=size;
+ const hctx=hc.getContext('2d'),rctx=rc.getContext('2d'),hi=hctx.createImageData(size,size),ri=rctx.createImageData(size,size),values=new Float32Array(size*size);
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size,v=y/size,i=y*size+x,n=tileFbm(u,v,71),micro=periodicNoise(u,v,240,83);values[i]=Math.max(0,Math.min(255,118+(n-.5)*112+(micro-.5)*42));const rough=Math.max(0,Math.min(255,178+n*58+micro*17));ri.data[i*4]=ri.data[i*4+1]=ri.data[i*4+2]=rough;ri.data[i*4+3]=255}
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4,at=(xx,yy)=>values[((yy+size)%size)*size+((xx+size)%size)],dx=(at(x+1,y)-at(x-1,y))/255*5.2,dy=(at(x,y+1)-at(x,y-1))/255*5.2;let nx=-dx,ny=-dy,nz=1,l=Math.hypot(nx,ny,nz);nx/=l;ny/=l;nz/=l;hi.data[i]=(nx*.5+.5)*255;hi.data[i+1]=(ny*.5+.5)*255;hi.data[i+2]=(nz*.5+.5)*255;hi.data[i+3]=255}
+ hctx.putImageData(hi,0,0);rctx.putImageData(ri,0,0);return {normalMap:setupTexture(new T.CanvasTexture(hc),T.LinearEncoding),roughnessMap:setupTexture(new T.CanvasTexture(rc),T.LinearEncoding)}}
+function barkTextureSet(size=256){
+ const c=document.createElement('canvas'),nc=document.createElement('canvas');c.width=c.height=nc.width=nc.height=size;const ctx=c.getContext('2d'),nctx=nc.getContext('2d'),img=ctx.createImageData(size,size),ni=nctx.createImageData(size,size),h=new Float32Array(size*size);
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size,v=y/size,i=(y*size+x)*4,n=tileFbm(u,v,101),ridges=Math.sin(u*6.2831853*29+Math.sin(v*6.2831853*5)*1.4)+.35*Math.sin(u*6.2831853*61+v*6.2831853*7);h[y*size+x]=118+ridges*30+n*33;img.data[i]=Math.max(18,Math.min(255,72+n*47+ridges*8));img.data[i+1]=Math.max(12,Math.min(255,39+n*30+ridges*5));img.data[i+2]=Math.max(8,Math.min(255,25+n*19+ridges*3));img.data[i+3]=255}
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4,at=(xx,yy)=>h[((yy+size)%size)*size+((xx+size)%size)];let nx=-(at(x+1,y)-at(x-1,y))*.035,ny=-(at(x,y+1)-at(x,y-1))*.035,nz=1,l=Math.hypot(nx,ny,nz);nx/=l;ny/=l;nz/=l;ni.data[i]=(nx*.5+.5)*255;ni.data[i+1]=(ny*.5+.5)*255;ni.data[i+2]=(nz*.5+.5)*255;ni.data[i+3]=255}
+ ctx.putImageData(img,0,0);nctx.putImageData(ni,0,0);return {map:setupTexture(new T.CanvasTexture(c),T.SRGBEncoding),normalMap:setupTexture(new T.CanvasTexture(nc),T.LinearEncoding)}}
+function groundTextureSet(){return {...detailTextureSet(512),grass:biomeTexture('grass'),rock:biomeTexture('rock'),sand:biomeTexture('sand'),snow:biomeTexture('snow'),bark:barkTextureSet()}}
+const groundMaps=groundTextureSet(),CS=64,SG=48,CR=6,chunks=new Map();
+const tmat=new T.MeshStandardMaterial({map:groundMaps.grass,normalMap:groundMaps.normalMap,normalScale:new T.Vector2(.62,.62),roughnessMap:groundMaps.roughnessMap,roughness:.96,metalness:0});
+tmat.onBeforeCompile=shader=>{shader.uniforms.uGrassTex={value:groundMaps.grass};shader.uniforms.uRockTex={value:groundMaps.rock};shader.uniforms.uSandTex={value:groundMaps.sand};shader.uniforms.uSnowTex={value:groundMaps.snow};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute vec4 biome; varying vec4 vBiome; varying vec2 vTerrainUv;').replace('#include <begin_vertex>','#include <begin_vertex>\nvBiome=biome; vTerrainUv=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uGrassTex; uniform sampler2D uRockTex; uniform sampler2D uSandTex; uniform sampler2D uSnowTex; varying vec4 vBiome; varying vec2 vTerrainUv;').replace('#include <map_fragment>','#include <map_fragment>\nvec3 bg=pow(max(texture2D(uGrassTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 br=pow(max(texture2D(uRockTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 bs=pow(max(texture2D(uSandTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 bw=pow(max(texture2D(uSnowTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); float total=max(dot(vBiome,vec4(1.0)),0.0001); diffuseColor.rgb=(bg*vBiome.x+br*vBiome.y+bs*vBiome.z+bw*vBiome.w)/total;');};
+tmat.customProgramCacheKey=()=>'sakura-pbr-biome-v3';
+const cylB=new T.CylinderGeometry(1,1,1,12).translate(0,.5,0),trunkG=new T.CylinderGeometry(.76,1,1,10).translate(0,.5,0),canG=new T.SphereGeometry(1,16,12),boxG=new T.BoxGeometry(1,1,1),sph=new T.SphereGeometry(1,12,8);
+canG.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(canG.attributes.position.count*3).fill(1),3));
+const trunkM=new T.MeshStandardMaterial({map:groundMaps.bark.map,normalMap:groundMaps.bark.normalMap,normalScale:new T.Vector2(.55,.8),roughness:.96});
+const canM=new T.MeshStandardMaterial({color:0xffffff,roughness:.92,vertexColors:true}),glowM=new T.MeshStandardMaterial({color:0xffd58a,emissive:0xffb94e,emissiveIntensity:1.2,roughness:.3});
+function makeGrassGeometry(){const p=[],uv=[],idx=[],levels=[[0,.13],[.32,.09],[.7,.035]],angles=[0,Math.PI/3,Math.PI*2/3],height=.72;for(const angle of angles){const base=p.length/3,c=Math.cos(angle),sn=Math.sin(angle);levels.forEach(([y,w])=>{for(const side of [-1,1]){const x=side*w,z=0;p.push(x*c+z*sn,y*height,-x*sn+z*c);uv.push(side<0?0:1,y)}});for(let row=0;row<levels.length-1;row++){const a=base+row*2,b=a+1,c=a+2,d=a+3;idx.push(a,c,b,b,c,d)}}const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(p.length).fill(1),3));return g}
+const grassG=makeGrassGeometry(),grassM=new T.MeshStandardMaterial({color:0xffffff,roughness:1,vertexColors:true,side:T.DoubleSide});
+function addInstancedWind(material,kind){material.onBeforeCompile=shader=>{shader.uniforms.uWindTime={value:0};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float uWindTime;');const displacement=kind==='grass'?'float gust=sin(uWindTime*1.7+instanceMatrix[3].x*.17+instanceMatrix[3].z*.13+position.y*2.0); transformed.x+=gust*position.y*.23; transformed.z+=cos(uWindTime*1.13+instanceMatrix[3].x*.09)*position.y*.10;':'float sway=sin(uWindTime*.62+instanceMatrix[3].x*.018+instanceMatrix[3].z*.021); transformed.x+=sway*max(position.y,0.0)*.045;';shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\n'+displacement+'\n#endif');material.userData.windShader=shader};material.customProgramCacheKey=()=> 'sakura-wind-'+kind+'-v1'}
+addInstancedWind(canM,'canopy');addInstancedWind(grassM,'grass');
+const rockG=new T.DodecahedronGeometry(1,1),rockM=new T.MeshStandardMaterial({color:0x8d8a80,roughness:.99,flatShading:true});
 
 function part(g,m,s,p,par){const o=new T.Mesh(g,m);o.scale.set(...s);o.position.set(...p);o.castShadow=true;o.receiveShadow=true;par.add(o);return o}
 const gate=new T.Group(),redM=M(0xe63a4d),blkM=M(0x2a1830);
 part(cylB,redM,[.28,7,.28],[-2.2,0,0],gate);part(cylB,redM,[.28,7,.28],[2.2,0,0],gate);part(boxG,redM,[6.8,.4,.5],[0,7.2,0],gate);part(boxG,blkM,[5.4,.3,.4],[0,6.2,0],gate);
 const D=new T.Object3D(),col=new T.Color();
-function gcol(c,h,ny,x,z){
- const n=fbm(x*.018,z*.018,3),slope=1-Math.max(0,Math.min(1,ny));
- if(h>112)c.setRGB(.91+n*.07,.93+n*.06,.96+n*.04);
- else if(slope>.42)c.setRGB(.34+n*.15,.34+n*.14,.32+n*.13);
- else if(h<-8)c.setRGB(.56+n*.09,.48+n*.08,.35+n*.07);
- else{
-   const patch=Math.max(0,Math.min(1,(n-.34)*2.2));
-   c.setRGB(.54+patch*.13,.69+patch*.12,.43+patch*.10);
- }
-}
+
 function mk(cx,cz){
 const ox=cx*CS+CS/2,oz=cz*CS+CS/2,grp=new T.Group();grp.position.set(ox,0,oz);
 const g=new T.PlaneGeometry(CS,CS,SG,SG);g.rotateX(-Math.PI/2);
-const UV=g.attributes.uv;for(let i=0;i<UV.count;i++)UV.setXY(i,UV.getX(i)*CS/7.5,UV.getY(i)*CS/7.5);
-const P=g.attributes.position,N=g.attributes.normal,cl=new Float32Array(P.count*3),c=new T.Color();
-for(let i=0;i<P.count;i++){const x=P.getX(i)+ox,z=P.getZ(i)+oz,h=hf(x,z);P.setY(i,h);
-const dx=hf(x-2,z)-hf(x+2,z),dz=hf(x,z-2)-hf(x,z+2),l=Math.hypot(dx,4,dz);N.setXYZ(i,dx/l,4/l,dz/l);gcol(c,h,4/l,x,z);cl[i*3]=c.r;cl[i*3+1]=c.g;cl[i*3+2]=c.b}
-g.setAttribute('color',new T.BufferAttribute(cl,3));
+const UV=g.attributes.uv;for(let i=0;i<UV.count;i++)UV.setXY(i,(cx*CS+UV.getX(i)*CS)/7.5,(cz*CS+UV.getY(i)*CS)/7.5);
+const P=g.attributes.position,N=g.attributes.normal,biome=new Float32Array(P.count*4);
+for(let i=0;i<P.count;i++){const x=P.getX(i)+ox,z=P.getZ(i)+oz,h=hf(x,z);P.setY(i,h);const dx=hf(x-2,z)-hf(x+2,z),dz=hf(x,z-2)-hf(x,z+2),l=Math.hypot(dx,4,dz),ny=4/l;N.setXYZ(i,dx/l,ny,dz/l);
+ const slope=1-ny,rock=Math.max(0,Math.min(.9,(slope-.13)*2.5)),snow=Math.max(0,Math.min(.95,(h-86)/42))*(1-rock*.55),sand=Math.max(0,Math.min(.82,(-h-1)/12))*(1-rock)*(1-snow),grass=Math.max(.015,1-rock-snow-sand),sum=grass+rock+sand+snow,j=i*4;
+ biome[j]=grass/sum;biome[j+1]=rock/sum;biome[j+2]=sand/sum;biome[j+3]=snow/sum;
+}g.setAttribute('biome',new T.BufferAttribute(biome,4));
 const terrain=new T.Mesh(g,tmat);terrain.receiveShadow=true;grp.add(terrain);
 const r=rng(cx*73856093^cz*19349663),tp=[],tr=[];
 const ok=(x,z,h)=>Math.abs(hf(x+1.5,z)-h)+Math.abs(hf(x,z+1.5)-h)<1.8;
@@ -137,44 +133,44 @@ for(let i=0;i<44;i++){
 }
 if(tp.length){
  const IT=new T.InstancedMesh(trunkG,trunkM,tp.length);
- const IC=new T.InstancedMesh(canG,canM,tp.length*5);
- const IB=new T.InstancedMesh(trunkG,trunkM,tp.length*4);
+ const IC=new T.InstancedMesh(canG,canM,tp.length*7);
+ const IB=new T.InstancedMesh(trunkG,trunkM,tp.length*5);
  IT.castShadow=IT.receiveShadow=IC.castShadow=IC.receiveShadow=IB.castShadow=IB.receiveShadow=true;
- IT.frustumCulled=IC.frustumCulled=IB.frustumCulled=false;
+ IT.frustumCulled=IC.frustumCulled=IB.frustumCulled=true;
  tp.forEach((q,i)=>{
   const[lx,h,lz,sz,rr]=q,H=sz>.96?18+rr*12:8+sz*7,tw=.20+H*.012,cr=2.1+H*.10;
   D.rotation.set(0,0,0);D.position.set(lx,h-.15,lz);D.scale.set(tw,H+.15,tw);D.updateMatrix();IT.setMatrixAt(i,D.matrix);
-  for(let b=0;b<4;b++){
-   const a=rr*6.283+b*Math.PI*.5,len=cr*(.72+r()*.3),by=H*(.42+b*.075);
+  for(let b=0;b<5;b++){
+   const a=rr*6.283+b*Math.PI*.4,len=cr*(.62+r()*.38),by=H*(.34+b*.075);
    D.position.set(lx+Math.cos(a)*.12, h+by, lz+Math.sin(a)*.12);
    D.rotation.set(Math.sin(a)*.75,a,-Math.cos(a)*.75);
-   D.scale.set(.105,len,.105);D.updateMatrix();IB.setMatrixAt(i*4+b,D.matrix);
+   D.scale.set(.10,len,.10);D.updateMatrix();IB.setMatrixAt(i*5+b,D.matrix);
   }
-  for(let k=0;k<5;k++){
-   const spread=cr*.62,px=lx+(r()-.5)*spread,pz=lz+(r()-.5)*spread;
-   const py=h+H*(.68+r()*.30),rad=cr*(.46+r()*.25);
+  for(let k=0;k<7;k++){
+   const spread=cr*.76,px=lx+(r()-.5)*spread,pz=lz+(r()-.5)*spread;
+   const py=h+H*(.58+r()*.40),rad=cr*(.31+r()*.29);
    D.position.set(px,py,pz);D.rotation.set(r()*.25,r()*6.28,r()*.25);
-   D.scale.set(rad*(.82+r()*.35),rad*(.68+r()*.30),rad*(.82+r()*.35));D.updateMatrix();IC.setMatrixAt(i*5+k,D.matrix);
-   col.setHSL(.91+rr*.075,.42+r()*.15,.39+r()*.19);IC.setColorAt(i*5+k,col);
+   D.scale.set(rad*(.82+r()*.35),rad*(.70+r()*.30),rad*(.82+r()*.35));D.updateMatrix();IC.setMatrixAt(i*7+k,D.matrix);
+   col.setHSL(.91+rr*.075,.25+r()*.18,.58+r()*.13);IC.setColorAt(i*7+k,col);
   }
   tr.push({x:lx+ox,z:lz+oz,r:tw+.23,t:h+H*1.05});
  });
  grp.add(IT,IB,IC);
 }
-const grassCount=620,grass=new T.InstancedMesh(grassG,grassM,grassCount);grass.frustumCulled=false;
+const grassCount=880,grass=new T.InstancedMesh(grassG,grassM,grassCount);
 for(let i=0;i<grassCount;i++){
  const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz);
  const slope=Math.abs(hf(lx+ox+1.5,lz+oz)-h)+Math.abs(hf(lx+ox,lz+oz+1.5)-h);
  D.position.set(lx,h,lz);D.rotation.set((r()-.5)*.16,r()*6.28,(r()-.5)*.16);
- const sc=.45+r()*.9;D.scale.set(sc,sc,sc);D.updateMatrix();grass.setMatrixAt(i,D.matrix);
- col.setHSL(.24+r()*.10,.42+r()*.25,.25+r()*.24);grass.setColorAt(i,col);
+ const sc=(slope<2.35&&h>-9&&h<82)?(.65+r()*.8):.0001;D.scale.set(sc,sc,sc);D.updateMatrix();grass.setMatrixAt(i,D.matrix);
+ col.setHSL(.23+r()*.10,.42+r()*.22,.42+r()*.22);grass.setColorAt(i,col);
 }
-grass.castShadow=false;grass.receiveShadow=true;grp.add(grass);
-const rockCount=24,rocks=new T.InstancedMesh(rockG,rockM,rockCount);rocks.frustumCulled=false;
+grass.castShadow=false;grass.receiveShadow=false;grp.add(grass);
+const rockCount=34,rocks=new T.InstancedMesh(rockG,rockM,rockCount);
 for(let i=0;i<rockCount;i++){
  const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz);
  const sz=.18+r()*1.15;
- D.position.set(lx,h+sz*.18,lz);D.rotation.set(r()*2,r()*6.28,r()*2);
+ D.position.set(lx,h+sz*.18,lz);D.rotation.set((r()-.5)*.45,r()*6.28,(r()-.5)*.45);
  D.scale.set(sz*(.65+r()*.8),sz*(.28+r()*.55),sz*(.65+r()*.7));D.updateMatrix();rocks.setMatrixAt(i,D.matrix);
 }
 rocks.castShadow=true;rocks.receiveShadow=true;grp.add(rocks);
@@ -209,16 +205,21 @@ const waterMaterial=new T.ShaderMaterial({
   float rip=sin(vUv.x*260.0+vUv.y*170.0)*sin(vUv.y*210.0-vUv.x*90.0);
   vec3 deep=vec3(.018,.105,.14),shallow=vec3(.08,.31,.34);
   vec3 water=mix(deep,shallow,clamp(.42+fresnel*.38+rip*.025,0.0,1.0));
-  vec3 reflected=reflect(-normalize(sunDirection),n);
-  float spec=pow(max(dot(reflected,v),0.0),100.0)*1.6;
-  water+=vec3(1.0,.83,.62)*spec+vec3(.47,.64,.72)*fresnel*.28;
+  vec3 reflected=reflect(-v,n);
+  vec3 reflectedSun=reflect(-normalize(sunDirection),n);
+  vec3 skyReflection=mix(vec3(.48,.58,.64),vec3(.12,.32,.53),smoothstep(-.05,.72,reflected.y));
+  float cloudBand=sin(reflected.x*38.0+reflected.z*19.0)*sin(reflected.z*31.0-reflected.x*12.0);
+  skyReflection=mix(skyReflection,vec3(.88,.91,.92),smoothstep(.40,.78,cloudBand)*.22);
+  water=mix(water,skyReflection,fresnel*.58);
+  float spec=pow(max(dot(reflectedSun,v),0.0),180.0)*2.0;
+  water+=vec3(1.0,.87,.68)*spec+vec3(.47,.64,.72)*fresnel*.12;
   gl_FragColor=vec4(water,1.0);
  }`,
  side:T.DoubleSide,transparent:false
 });
 const water=new T.Mesh(waterGeometry,waterMaterial);water.rotation.x=-Math.PI/2;water.position.y=-12;water.receiveShadow=true;S.add(water);
 /* petals */
-const PN=1800,pp=new Float32Array(PN*3);for(let i=0;i<PN*3;i++)pp[i]=(Math.random()-.5)*75;
+const PN=2200,pp=new Float32Array(PN*3);for(let i=0;i<PN*3;i++)pp[i]=(Math.random()-.5)*75;
 const cv=document.createElement('canvas');cv.width=cv.height=32;const cx2=cv.getContext('2d'),gr=cx2.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#fff');gr.addColorStop(1,'rgba(255,255,255,0)');cx2.fillStyle=gr;cx2.fillRect(0,0,32,32);
 const petG=new T.BufferGeometry();petG.setAttribute('position',new T.BufferAttribute(pp,3));
 const pets=new T.Points(petG,new T.PointsMaterial({color:0xf8c8d8,size:.28,map:new T.CanvasTexture(cv),transparent:true,depthWrite:false,sizeAttenuation:true}));pets.frustumCulled=false;S.add(pets);
@@ -330,6 +331,8 @@ waterMaterial.uniforms.sunDirection.value.set(-.49,.71,-.38).normalize();
 const P=petG.attributes.position.array;for(let i=0;i<PN;i++){const j=i*3;P[j]+=Math.sin(t+i)*dt*.6+dt*1.2;P[j+1]-=dt*(.7+(i%5)*.12);P[j+2]+=Math.cos(t*.8+i)*dt*.5;
 for(let a=0;a<3;a++){const c=[C.position.x,C.position.y,C.position.z][a];if(P[j+a]-c>30)P[j+a]-=60;else if(P[j+a]-c<-30)P[j+a]+=60}}petG.attributes.position.needsUpdate=true;
 if(frame%8===0)hud.textContent=`x ${pos.x|0}  z ${pos.z|0}  alt ${pos.y.toFixed(0)}m  ${fly?'FLY':''}  photoreal terrain  chunks ${chunks.size}  ${(Math.hypot(pos.x,pos.z)/1000).toFixed(2)} km`;
+if(canM.userData.windShader)canM.userData.windShader.uniforms.uWindTime.value=t;
+if(grassM.userData.windShader)grassM.userData.windShader.uniforms.uWindTime.value=t;
 R.render(S,C)}
 requestAnimationFrame(loop);
 </script></body></html>
