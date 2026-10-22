@@ -118,7 +118,7 @@ const D=new T.Object3D(),col=new T.Color();
 function mk(cx,cz){
 const ox=cx*CS+CS/2,oz=cz*CS+CS/2,grp=new T.Group();grp.position.set(ox,0,oz);
 const g=new T.PlaneGeometry(CS,CS,SG,SG);g.rotateX(-Math.PI/2);
-const UV=g.attributes.uv;for(let i=0;i<UV.count;i++)UV.setXY(i,(cx*CS+UV.getX(i)*CS)/7.5,(cz*CS+UV.getY(i)*CS)/7.5);
+const UV=g.attributes.uv;for(let i=0;i<UV.count;i++)UV.setXY(i,(cx*CS+UV.getX(i)*CS)/7.5,(cz*CS+(1-UV.getY(i))*CS)/7.5);
 const P=g.attributes.position,N=g.attributes.normal,biome=new Float32Array(P.count*4);
 for(let i=0;i<P.count;i++){const x=P.getX(i)+ox,z=P.getZ(i)+oz,h=hf(x,z);P.setY(i,h);const dx=hf(x-2,z)-hf(x+2,z),dz=hf(x,z-2)-hf(x,z+2),l=Math.hypot(dx,4,dz),ny=4/l;N.setXYZ(i,dx/l,ny,dz/l);
  const slope=1-ny,rock=Math.max(0,Math.min(.9,(slope-.13)*2.5)),snow=Math.max(0,Math.min(.95,(h-86)/42))*(1-rock*.55),sand=Math.max(0,Math.min(.82,(-h-1)/12))*(1-rock)*(1-snow),grass=Math.max(.015,1-rock-snow-sand),sum=grass+rock+sand+snow,j=i*4;
