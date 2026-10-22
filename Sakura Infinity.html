@@ -96,7 +96,7 @@ function barkTextureSet(size=256){
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4,at=(xx,yy)=>h[((yy+size)%size)*size+((xx+size)%size)];let nx=-(at(x+1,y)-at(x-1,y))*.035,ny=-(at(x,y+1)-at(x,y-1))*.035,nz=1,l=Math.hypot(nx,ny,nz);nx/=l;ny/=l;nz/=l;ni.data[i]=(nx*.5+.5)*255;ni.data[i+1]=(ny*.5+.5)*255;ni.data[i+2]=(nz*.5+.5)*255;ni.data[i+3]=255}
  ctx.putImageData(img,0,0);nctx.putImageData(ni,0,0);return {map:setupTexture(new T.CanvasTexture(c),T.SRGBEncoding),normalMap:setupTexture(new T.CanvasTexture(nc),T.LinearEncoding)}}
 function groundTextureSet(){return {...detailTextureSet(512),grass:biomeTexture('grass'),rock:biomeTexture('rock'),sand:biomeTexture('sand'),snow:biomeTexture('snow'),blossom:biomeTexture('blossom'),bark:barkTextureSet()}}
-const groundMaps=groundTextureSet(),CS=64,SG=48,CR=6,chunks=new Map();
+const groundMaps=groundTextureSet(),CS=64,SG=48,CR=5,chunks=new Map();
 const tmat=new T.MeshStandardMaterial({map:groundMaps.grass,normalMap:groundMaps.normalMap,normalScale:new T.Vector2(.62,.62),roughnessMap:groundMaps.roughnessMap,roughness:.96,metalness:0});
 tmat.onBeforeCompile=shader=>{shader.uniforms.uGrassTex={value:groundMaps.grass};shader.uniforms.uRockTex={value:groundMaps.rock};shader.uniforms.uSandTex={value:groundMaps.sand};shader.uniforms.uSnowTex={value:groundMaps.snow};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute vec4 biome; varying vec4 vBiome; varying vec2 vTerrainUv;').replace('#include <begin_vertex>','#include <begin_vertex>\nvBiome=biome; vTerrainUv=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uGrassTex; uniform sampler2D uRockTex; uniform sampler2D uSandTex; uniform sampler2D uSnowTex; varying vec4 vBiome; varying vec2 vTerrainUv;').replace('#include <map_fragment>','#include <map_fragment>\nvec3 bg=pow(max(texture2D(uGrassTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 br=pow(max(texture2D(uRockTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 bs=pow(max(texture2D(uSandTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 bw=pow(max(texture2D(uSnowTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); float total=max(dot(vBiome,vec4(1.0)),0.0001); diffuseColor.rgb=(bg*vBiome.x+br*vBiome.y+bs*vBiome.z+bw*vBiome.w)/total;');};
 tmat.customProgramCacheKey=()=>'sakura-pbr-biome-v3';
@@ -160,17 +160,17 @@ if(tp.length){
 const grassCount=880,grass=new T.InstancedMesh(grassG,grassM,grassCount);
 for(let i=0;i<grassCount;i++){
  const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz);
- const slope=Math.abs(hf(lx+ox+1.5,lz+oz)-h)+Math.abs(hf(lx+ox,lz+oz+1.5)-h);
- D.position.set(lx,h,lz);D.rotation.set((r()-.5)*.16,r()*6.28,(r()-.5)*.16);
+ const dx=(hf(lx+ox+1.5,lz+oz)-hf(lx+ox-1.5,lz+oz))/3,dz=(hf(lx+ox,lz+oz+1.5)-hf(lx+ox,lz+oz-1.5))/3,slope=Math.abs(dx)+Math.abs(dz);
+ D.position.set(lx,h,lz);D.rotation.set(Math.atan(dz)+(r()-.5)*.05,r()*6.28,-Math.atan(dx)+(r()-.5)*.05);
  const sc=(slope<2.35&&h>-9&&h<82)?(.65+r()*.8):.0001;D.scale.set(sc,sc,sc);D.updateMatrix();grass.setMatrixAt(i,D.matrix);
  col.setHSL(.23+r()*.10,.42+r()*.22,.42+r()*.22);grass.setColorAt(i,col);
 }
 grass.castShadow=false;grass.receiveShadow=false;grp.add(grass);
 const rockCount=34,rocks=new T.InstancedMesh(rockG,rockM,rockCount);
 for(let i=0;i<rockCount;i++){
- const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz);
+ const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz),dx=(hf(lx+ox+1.5,lz+oz)-hf(lx+ox-1.5,lz+oz))/3,dz=(hf(lx+ox,lz+oz+1.5)-hf(lx+ox,lz+oz-1.5))/3;
  const sz=.18+r()*1.15,rx=sz*(.65+r()*.8),ry=sz*(.28+r()*.55),rz=sz*(.65+r()*.7);
- D.position.set(lx+((r()-.5)*.25),h+ry*.78,lz+((r()-.5)*.25));D.rotation.set((r()-.5)*.45,r()*6.28,(r()-.5)*.45);
+ D.position.set(lx+((r()-.5)*.25),h+ry*.72,lz+((r()-.5)*.25));D.rotation.set(Math.atan(dz)+(r()-.5)*.12,r()*6.28,-Math.atan(dx)+(r()-.5)*.12);
  D.scale.set(rx,ry,rz);D.updateMatrix();rocks.setMatrixAt(i,D.matrix);
 }
 rocks.castShadow=true;rocks.receiveShadow=true;grp.add(rocks);
