@@ -11,9 +11,9 @@ canvas{display:block}
 #x{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff;opacity:.85;pointer-events:none;mix-blend-mode:difference}
 </style></head><body>
 <div id="ui"><h1>🌸 SAKURA INFINITY 🌸</h1>
-<p>An endless anime world. Walk, jump, glide, and fly forever.</p>
+<p>An endless living world. Explore dense, wind-swept grass, layered Sakura trees, and responsive first-person movement.</p>
 <p><b>WASD</b> move · <b>Shift</b> sprint · <b>Space</b> jump / double-jump / hold to glide · <b>F</b> fly mode · <b>Click</b> fire a jiggly mochi blob</p>
-<p>Wave back at the girls — watch their twin-tails bounce.</p>
+<p>Camera inertia, landing impact, running sway, soft-body mochi, and spring-driven twin-tails are active.</p>
 <p style="margin-top:14px;font-size:20px">Click to begin</p></div>
 <div id="x"></div><div id="hud"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -373,7 +373,7 @@ water.position.set(Math.round(pos.x/64)*64,-12,Math.round(pos.z/64)*64);waterMat
 waterMaterial.uniforms.sunDirection.value.set(-.49,.71,-.38).normalize();
 const P=petG.attributes.position.array;for(let i=0;i<PN;i++){const j=i*3;P[j]+=Math.sin(t+i)*dt*.6+dt*1.2;P[j+1]-=dt*(.7+(i%5)*.12);P[j+2]+=Math.cos(t*.8+i)*dt*.5;
 for(let a=0;a<3;a++){const c=[C.position.x,C.position.y,C.position.z][a];if(P[j+a]-c>30)P[j+a]-=60;else if(P[j+a]-c<-30)P[j+a]+=60}}petG.attributes.position.needsUpdate=true;
-if(frame%8===0)hud.textContent=`x ${pos.x|0}  z ${pos.z|0}  alt ${pos.y.toFixed(0)}m  ${fly?'FLY':''}  photoreal terrain  chunks ${chunks.size}  ${(Math.hypot(pos.x,pos.z)/1000).toFixed(2)} km`;
+if(frame%8===0)hud.textContent=`x ${pos.x|0}  z ${pos.z|0}  alt ${pos.y.toFixed(0)}m  ${fly?'FLY':''}  dense grass  spring cam  chunks ${chunks.size}  ${(Math.hypot(pos.x,pos.z)/1000).toFixed(2)} km`;
 if(canM.userData.windShader)canM.userData.windShader.uniforms.uWindTime.value=t;
 if(grassM.userData.windShader)grassM.userData.windShader.uniforms.uWindTime.value=t;
 R.render(S,C)}
