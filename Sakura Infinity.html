@@ -104,7 +104,23 @@ const cylB=new T.CylinderGeometry(1,1,1,12).translate(0,.5,0),trunkG=new T.Cylin
 canG.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(canG.attributes.position.count*3).fill(1),3));
 const trunkM=new T.MeshStandardMaterial({map:groundMaps.bark.map,normalMap:groundMaps.bark.normalMap,normalScale:new T.Vector2(.55,.8),roughness:.96});
 const canM=new T.MeshStandardMaterial({color:0xffffff,map:groundMaps.blossom,roughness:.91,vertexColors:true}),glowM=new T.MeshStandardMaterial({color:0xffd58a,emissive:0xffb94e,emissiveIntensity:1.2,roughness:.3});
-function makeGrassGeometry(){const p=[],uv=[],idx=[],levels=[[0,.13],[.32,.09],[.7,.035]],angles=[0,Math.PI/3,Math.PI*2/3],height=.72;for(const angle of angles){const base=p.length/3,c=Math.cos(angle),sn=Math.sin(angle);levels.forEach(([y,w])=>{for(const side of [-1,1]){const x=side*w,z=0;p.push(x*c+z*sn,y*height,-x*sn+z*c);uv.push(side<0?0:1,y)}});for(let row=0;row<levels.length-1;row++){const a=base+row*2,b=a+1,c=a+2,d=a+3;idx.push(a,c,b,b,c,d)}}const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(p.length).fill(1),3));return g}
+function makeGrassGeometry(){
+ const p=[],uv=[],idx=[],levels=[[0,.11],[.20,.115],[.43,.085],[.67,.052],[.88,.006]],angles=[0,Math.PI/3,Math.PI*2/3],height=.92;
+ for(const angle of angles){
+  const base=p.length/3,c=Math.cos(angle),sn=Math.sin(angle);
+  levels.forEach(([y,w],row)=>{for(const side of [-1,1]){
+   const x=side*w,z=Math.sin(y*1.65)*.045;
+   p.push(x*c+z*sn,y*height,-x*sn+z*c);
+   uv.push(side<0?0:1,y);
+  }});
+  for(let row=0;row<levels.length-1;row++){const a=base+row*2,b=a+1,c=a+2,d=a+3;idx.push(a,c,b,b,c,d);}
+ }
+ const g=new T.BufferGeometry();
+ g.setAttribute('position',new T.Float32BufferAttribute(p,3));
+ g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+ g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(p.length).fill(1),3));
+ return g;
+}
 const grassG=makeGrassGeometry(),grassM=new T.MeshStandardMaterial({color:0xffffff,roughness:1,vertexColors:true,side:T.DoubleSide});
 function addInstancedWind(material,kind){material.onBeforeCompile=shader=>{shader.uniforms.uWindTime={value:0};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float uWindTime;');const displacement=kind==='grass'?'float gust=sin(uWindTime*1.7+(modelMatrix[3].x+instanceMatrix[3].x)*.17+(modelMatrix[3].z+instanceMatrix[3].z)*.13+position.y*2.0); transformed.x+=gust*position.y*.23; transformed.z+=cos(uWindTime*1.13+(modelMatrix[3].x+instanceMatrix[3].x)*.09)*position.y*.10;':'float sway=sin(uWindTime*.62+(modelMatrix[3].x+instanceMatrix[3].x)*.018+(modelMatrix[3].z+instanceMatrix[3].z)*.021); transformed.x+=sway*max(position.y,0.0)*.045;';shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\n'+displacement+'\n#endif');material.userData.windShader=shader};material.customProgramCacheKey=()=> 'sakura-wind-'+kind+'-v1'}
 addInstancedWind(canM,'canopy');addInstancedWind(grassM,'grass');
@@ -115,6 +131,7 @@ const gate=new T.Group(),redM=M(0xe63a4d),blkM=M(0x2a1830);
 part(cylB,redM,[.28,7,.28],[-2.2,0,0],gate);part(cylB,redM,[.28,7,.28],[2.2,0,0],gate);part(boxG,redM,[6.8,.4,.5],[0,7.2,0],gate);part(boxG,blkM,[5.4,.3,.4],[0,6.2,0],gate);
 const D=new T.Object3D(),col=new T.Color();
 
+function grassTier(d){return d<1.55?2600:d<3.25?1450:520;}
 function mk(cx,cz){
 const ox=cx*CS+CS/2,oz=cz*CS+CS/2,grp=new T.Group();grp.position.set(ox,0,oz);
 const g=new T.PlaneGeometry(CS,CS,SG,SG);g.rotateX(-Math.PI/2);
@@ -157,7 +174,7 @@ if(tp.length){
  });
  grp.add(IT,IB,IC);
 }
-const grassCount=880,grass=new T.InstancedMesh(grassG,grassM,grassCount);
+const grassDistance=Math.hypot(cx-Math.floor(pos.x/CS),cz-Math.floor(pos.z/CS)),grassDensity=grassTier(grassDistance),grassCount=grassDensity,grass=new T.InstancedMesh(grassG,grassM,grassCount);
 for(let i=0;i<grassCount;i++){
  const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz);
  const dx=(hf(lx+ox+1.5,lz+oz)-hf(lx+ox-1.5,lz+oz))/3,dz=(hf(lx+ox,lz+oz+1.5)-hf(lx+ox,lz+oz-1.5))/3,slope=Math.abs(dx)+Math.abs(dz);
@@ -176,11 +193,17 @@ for(let i=0;i<rockCount;i++){
 rocks.castShadow=true;rocks.receiveShadow=true;grp.add(rocks);
 if(r()<.22){const lx=(r()-.5)*40,lz=(r()-.5)*40,h=hf(lx+ox,lz+oz);if(h>2&&ok(lx+ox,lz+oz,h)){const q=gate.clone();q.position.set(lx,h,lz);q.scale.setScalar(2+r()*3);q.rotation.y=r()*6.28;grp.add(q)}}
 if(r()<.24){const lx=(r()-.5)*50,lz=(r()-.5)*50,h=hf(lx+ox,lz+oz);if(h>1){const lamp=part(cylB,trunkM,[.12,4.2,.12],[lx,h,lz],grp);lamp.castShadow=true;const light=part(sph,glowM,[.38,.38,.38],[lx,h+4.4,lz],grp)}}
-S.add(grp);chunks.set(cx+','+cz,{grp,g,tr,cx,cz})}
-function streamChunks(px,pz,budget){const pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS),need=[];
-for(let a=-CR;a<=CR;a++)for(let b=-CR;b<=CR;b++)if(a*a+b*b<=CR*CR+1){const k=(pcx+a)+','+(pcz+b);if(!chunks.has(k))need.push([a*a+b*b,pcx+a,pcz+b])}
-need.sort((a,b)=>a[0]-b[0]);for(let i=0;i<Math.min(budget,need.length);i++)mk(need[i][1],need[i][2]);
-for(const[k,c]of chunks)if(Math.abs(c.cx-pcx)>CR+1||Math.abs(c.cz-pcz)>CR+1){S.remove(c.grp);c.g.dispose();chunks.delete(k)}}
+S.add(grp);chunks.set(cx+','+cz,{grp,g,tr,cx,cz,grassDensity})}
+function streamChunks(px,pz,budget){
+ const pcx=Math.floor(px/CS),pcz=Math.floor(pz/CS),need=[];
+ for(const[k,c]of chunks){
+  if(Math.abs(c.cx-pcx)>CR+1||Math.abs(c.cz-pcz)>CR+1){S.remove(c.grp);c.g.dispose();chunks.delete(k);continue;}
+  const wanted=grassTier(Math.hypot(c.cx-pcx,c.cz-pcz));
+  if(c.grassDensity!==wanted){S.remove(c.grp);c.g.dispose();chunks.delete(k);mk(c.cx,c.cz);break;}
+ }
+ for(let a=-CR;a<=CR;a++)for(let b=-CR;b<=CR;b++)if(a*a+b*b<=CR*CR+1){const k=(pcx+a)+','+(pcz+b);if(!chunks.has(k))need.push([a*a+b*b,pcx+a,pcz+b]);}
+ need.sort((a,b)=>a[0]-b[0]);for(let i=0;i<Math.min(budget,need.length);i++)mk(need[i][1],need[i][2]);
+}
 /* water */
 const waterGeometry=new T.PlaneGeometry(1800,1800,96,96);
 const waterMaterial=new T.ShaderMaterial({
@@ -231,7 +254,7 @@ cx2.strokeStyle='rgba(255,244,250,.46)';cx2.lineWidth=1;cx2.beginPath();cx2.move
 const petG=new T.BufferGeometry();petG.setAttribute('position',new T.BufferAttribute(pp,3));
 const pets=new T.Points(petG,new T.PointsMaterial({color:0xf8c8d8,size:.28,map:new T.CanvasTexture(cv),transparent:true,depthWrite:false,sizeAttenuation:true}));pets.frustumCulled=false;S.add(pets);
 /* ---------- player ---------- */
-const keys={};let yaw=0,pitch=0,locked=false,started=false,drag=false,fly=false,jumps=0,grounded=false,bob=0,t=0,frame=0;
+const keys={};let yaw=0,pitch=0,locked=false,started=false,drag=false,fly=false,jumps=0,grounded=false,bob=0,t=0,frame=0,cameraReady=false,cameraBob=0,cameraRoll=0,landingImpulse=0,cameraTurn=0;const cameraPosition=new T.Vector3(),cameraTarget=new T.Vector3();
 const pos=new T.Vector3(),vel=new T.Vector3();
 for(let r=0;r<600;r+=10){let f=false;for(let a=0;a<8;a++){const x=Math.cos(a)*r,z=Math.sin(a)*r;if(hf(x,z)>3){pos.set(x,hf(x,z),z);f=true;break}}if(f)break}
 addEventListener('keydown',e=>{keys[e.code]=1;if(e.code==='KeyF')fly=!fly;if(e.code==='Space'&&!e.repeat&&!fly){if(grounded||jumps<2){vel.y=9.5;if(!grounded)jumps++;grounded=false}}if(e.code==='Space')e.preventDefault()});
@@ -239,7 +262,7 @@ addEventListener('keyup',e=>keys[e.code]=0);
 const ui=document.getElementById('ui');
 ui.onclick=()=>{started=true;ui.style.display='none';try{R.domElement.requestPointerLock()}catch(e){}};
 document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===R.domElement;if(!locked&&started)ui.style.display='flex'});
-addEventListener('mousemove',e=>{if(locked||drag){yaw-=e.movementX*.0022;pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*.0022))}});
+addEventListener('mousemove',e=>{if(locked||drag){yaw-=e.movementX*.0022;pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*.0022));cameraTurn=Math.max(-.055,Math.min(.055,cameraTurn-e.movementX*.000045))}});
 addEventListener('mousedown',e=>{if(!started)return;if(locked)shoot();else drag=true});addEventListener('mouseup',()=>drag=false);
 addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix()});
 function treeCollide(p,rad){const pcx=Math.floor(p.x/CS),pcz=Math.floor(p.z/CS);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const c=chunks.get((pcx+a)+','+(pcz+b));if(!c)continue;for(const q of c.tr){if(p.y>q.t)continue;const dx=p.x-q.x,dz=p.z-q.z,d=Math.hypot(dx,dz),m=q.r+rad;if(d<m&&d>1e-4){p.x=q.x+dx/d*m;p.z=q.z+dz/d*m}}}}
@@ -270,7 +293,7 @@ for(let i=0;i<NV;i++){const j=i*3,k=BK[i],w=BW[i];
 vv[j]+=(-k*off[j]-5*vv[j]-ax*w)*dt;vv[j+1]+=(-k*off[j+1]-5*vv[j+1]-ay*w)*dt;vv[j+2]+=(-k*off[j+2]-5*vv[j+2]-az*w)*dt;
 let ox=off[j]+vv[j]*dt,oy=off[j+1]+vv[j+1]*dt,oz=off[j+2]+vv[j+2]*dt;const l=Math.hypot(ox,oy,oz);if(l>mx){const f=mx/l;ox*=f;oy*=f;oz*=f}
 off[j]=ox;off[j+1]=oy;off[j+2]=oz;pa[j]=B0[j]*r+ox;pa[j+1]=B0[j+1]*r+oy;pa[j+2]=B0[j+2]*r+oz}
-b.m.geometry.attributes.position.needsUpdate=true}
+b.m.geometry.attributes.position.needsUpdate=true;b.m.geometry.computeVertexNormals()}
 function updBlobs(dt){
 for(const b of blobs){const p=b.p,v=b.v,r=b.r;b.pv.copy(v);
 const dxp=p.x-pos.x,dzp=p.z-pos.z;
@@ -321,16 +344,29 @@ if(d<16){n.h=Math.atan2(dx,dz);n.a2.rotation.z=Math.PI*.88+Math.sin(t*9+n.ph)*.4
 else{n.a2.rotation.z=0;if(n.tm<0){n.tm=2+Math.random()*4;n.h+=(Math.random()-.5)*2.2;n.walk=Math.random()<.7}if(n.walk)sp=2.2}
 const nx=n.x+Math.sin(n.h)*sp*dt,nz=n.z+Math.cos(n.h)*sp*dt;if(hf(nx,nz)<.6){n.h+=Math.PI*.7}else{n.x=nx;n.z=nz}
 n.y=hf(n.x,n.z);n.ph+=sp*dt*4;n.l1.rotation.x=Math.sin(n.ph)*.6*(sp>0);n.l2.rotation.x=-Math.sin(n.ph)*.6*(sp>0);
-n.g.position.set(n.x,n.y+Math.abs(Math.sin(n.ph))*.04*(sp>0),n.z);n.g.rotation.y=n.h;
+n.g.position.set(n.x,n.y+Math.abs(Math.sin(n.ph))*.055*(sp>0),n.z);n.g.rotation.y=n.h;n.g.rotation.x=sp>0?Math.cos(n.ph*.5)*.025:Math.sin(t*1.3+n.ph)*.012;n.g.rotation.z=sp>0?-Math.sin(n.ph)*.045:0;
 for(const c of n.chains)stepChain(c,n,dt)}hairIM.instanceMatrix.needsUpdate=true;hairIM.count=hi}
 /* ---------- init blobs ---------- */
 for(let i=0;i<80;i++){const b=mkBlob();const a=Math.random()*6.28,d=8+Math.random()*60,x=pos.x+Math.cos(a)*d,z=pos.z+Math.sin(a)*d;place(b,x,Math.max(hf(x,z),0)+8+Math.random()*20,z,.5+Math.random()*.55,new T.Vector3())}
 /* ---------- loop ---------- */
 const hud=document.getElementById('hud');let last=performance.now();
 function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.033)||.016;last=now;t+=dt;frame++;
-updPlayer(dt);streamChunks(pos.x,pos.z,frame<40?10:2);updBlobs(dt);updNPC(dt);
-const sb=Math.sin(bob)*.06;C.position.set(pos.x,pos.y+1.68+sb,pos.z);C.rotation.set(pitch,yaw,0);
-C.fov=78+Math.min(14,Math.hypot(vel.x,vel.z)*.35);C.updateProjectionMatrix();
+const wasGrounded=grounded,fallSpeed=vel.y;updPlayer(dt);if(!fly&&!wasGrounded&&grounded&&fallSpeed<-4.5)landingImpulse=Math.max(landingImpulse,Math.min(.24,(-fallSpeed-3.8)*.012));streamChunks(pos.x,pos.z,frame<40?10:2);updBlobs(dt);updNPC(dt);
+const horizontalSpeed=Math.hypot(vel.x,vel.z),lateralSpeed=vel.x*Math.cos(yaw)-vel.z*Math.sin(yaw);
+const wantedBob=grounded&&!fly?Math.sin(bob*2.25)*Math.min(.075,horizontalSpeed*.009):0;
+cameraBob+=(wantedBob-cameraBob)*(1-Math.exp(-dt*(grounded?15:6)));
+landingImpulse*=Math.exp(-dt*7.5);cameraTurn*=Math.exp(-dt*6.5);
+const bobAir=fly?Math.sin(t*2.1)*.018:0;
+cameraTarget.set(pos.x-vel.x*.026,pos.y+1.68+cameraBob+bobAir-landingImpulse,pos.z-vel.z*.026);
+if(!cameraReady){cameraPosition.copy(cameraTarget);cameraReady=true;}
+else cameraPosition.lerp(cameraTarget,1-Math.exp(-dt*(grounded?14:7)));
+C.position.copy(cameraPosition);
+const wantedRoll=Math.max(-.075,Math.min(.075,-lateralSpeed*.007+cameraTurn));
+cameraRoll+=(wantedRoll-cameraRoll)*(1-Math.exp(-dt*8));
+const impactWave=Math.sin(t*28)*landingImpulse*.22;
+C.rotation.set(pitch+landingImpulse*.45+impactWave,yaw,cameraRoll);
+const wantedFov=78+Math.min(10,horizontalSpeed*.43)+(fly?2:0);
+C.fov+=(wantedFov-C.fov)*(1-Math.exp(-dt*4.5));C.updateProjectionMatrix();
 sky.position.copy(C.position);far.position.copy(C.position);
 sun.position.set(pos.x-180,260,pos.z-140);sun.target.position.set(pos.x,0,pos.z);
 water.position.set(Math.round(pos.x/64)*64,-12,Math.round(pos.z/64)*64);waterMaterial.uniforms.time.value=t;
