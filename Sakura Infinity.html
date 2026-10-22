@@ -9,6 +9,33 @@ canvas{display:block}
 #ui p{margin:4px;opacity:.92;line-height:1.55;max-width:560px}
 #hud{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));color:#fff;font:12px monospace;text-shadow:0 1px 2px #000;pointer-events:none}
 #x{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff;opacity:.85;pointer-events:none;mix-blend-mode:difference}
+#mobileControls{display:none;position:fixed;inset:0;z-index:20;pointer-events:none;touch-action:none;font:700 12px/1 system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+#mobileControls.active{display:block}
+#lookZone{position:absolute;inset:0 0 0 39%;z-index:0;touch-action:none;pointer-events:auto}
+#leftStick{position:absolute;left:max(18px,env(safe-area-inset-left));bottom:max(20px,env(safe-area-inset-bottom));width:156px;height:156px;border:1px solid rgba(255,255,255,.48);border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.10),rgba(8,12,20,.22) 65%,rgba(255,255,255,.07));box-shadow:inset 0 0 28px #0005,0 4px 24px #0004;pointer-events:auto;touch-action:none}
+#leftStick:before{content:"";position:absolute;inset:20px;border:1px dashed #ffffff35;border-radius:50%}
+#stickKnob{position:absolute;left:50%;top:50%;width:66px;height:66px;border:1px solid #ffffffb8;border-radius:50%;background:radial-gradient(circle at 32% 25%,#ffffff75,#aab5c755 42%,#10151ba8);box-shadow:0 5px 18px #0008;transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,0px)));pointer-events:none}
+#stickLabel{position:absolute;left:0;right:0;bottom:7px;text-align:center;font:9px monospace;letter-spacing:.18em;color:#ffffffa0;pointer-events:none}
+#mobileActions{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,64px);gap:10px;z-index:3;pointer-events:auto}
+.mobileAction{width:64px;height:64px;border:1px solid #ffffff86;border-radius:50%;background:radial-gradient(circle at 35% 25%,#ffffff40,#17202bbb 72%);color:#fff;box-shadow:0 5px 18px #0007,inset 0 1px 0 #ffffff45;touch-action:none;display:grid;place-items:center;letter-spacing:.08em;font-size:10px;padding:0;outline:none;-webkit-tap-highlight-color:transparent}
+.mobileAction:active,.mobileAction.on{background:radial-gradient(circle at 35% 25%,#ffffff75,#6b94a8ed 78%);border-color:#fff}
+#mobileActions #jumpButton{width:72px;height:72px;grid-column:2;grid-row:1}
+#mobileActions #fireButton{grid-column:1;grid-row:1}
+#mobileActions #flyButton{grid-column:1;grid-row:2}
+#mobileActions #sprintButton{grid-column:2;grid-row:2;width:56px;height:56px;justify-self:end;align-self:end}
+#touchHint{position:absolute;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);white-space:nowrap;color:#ffffffb5;font:10px monospace;letter-spacing:.12em;text-shadow:0 1px 5px #000;pointer-events:none}
+#rotateNotice{display:none;position:fixed;inset:0;z-index:40;background:#090b10;color:#fff;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:28px;font-family:system-ui,sans-serif}
+#rotateNotice strong{font-size:clamp(22px,5vw,34px);letter-spacing:.08em}
+#rotateNotice span{margin-top:12px;max-width:300px;color:#bcc4cf;line-height:1.6;font-size:14px}
+#rotateIcon{font-size:58px;margin-bottom:18px;animation:rotatePhone 2s ease-in-out infinite}
+@keyframes rotatePhone{0%,12%{transform:rotate(0)}58%,82%{transform:rotate(90deg)}100%{transform:rotate(90deg)}}
+#hud{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto;left:calc(12px + env(safe-area-inset-left,0px));}
+@media (hover:none) and (pointer:coarse){#ui p:nth-of-type(2){max-width:360px}}
+@media (orientation:portrait) and (max-width:950px){
+ body.playing #rotateNotice{display:flex}
+ body.playing #mobileControls{visibility:hidden}
+ body.playing #hud{visibility:hidden}
+}
 </style></head><body>
 <div id="ui"><h1>🌸 SAKURA INFINITY 🌸</h1>
 <p>An endless living world. Explore dense, wind-swept grass, layered Sakura trees, and responsive first-person movement.</p>
@@ -16,6 +43,19 @@ canvas{display:block}
 <p>Camera inertia, landing impact, running sway, soft-body mochi, and spring-driven twin-tails are active.</p>
 <p style="margin-top:14px;font-size:20px">Click to begin</p></div>
 <div id="x"></div><div id="hud"></div>
+<div id="mobileControls" aria-label="Touch controls">
+ <div id="lookZone" aria-label="Drag to look around"></div>
+ <div id="leftStick" aria-label="Movement joystick"><div id="stickKnob"></div><div id="stickLabel">MOVE</div></div>
+ <div id="mobileActions">
+  <button class="mobileAction" id="fireButton" type="button">MOCHI</button>
+  <button class="mobileAction" id="jumpButton" type="button">JUMP</button>
+  <button class="mobileAction" id="flyButton" type="button">FLY OFF</button>
+  <button class="mobileAction" id="sprintButton" type="button">RUN</button>
+ </div>
+ <div id="touchHint">DRAG RIGHT SIDE TO LOOK</div>
+</div>
+<div id="rotateNotice"><div id="rotateIcon" aria-hidden="true">▱</div><strong>ROTATE TO LANDSCAPE</strong><span>Turn your phone sideways to play Sakura Infinity. The game is designed for horizontal (landscape) orientation.</span></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const T=THREE;
@@ -255,25 +295,64 @@ const petG=new T.BufferGeometry();petG.setAttribute('position',new T.BufferAttri
 const pets=new T.Points(petG,new T.PointsMaterial({color:0xf8c8d8,size:.28,map:new T.CanvasTexture(cv),transparent:true,depthWrite:false,sizeAttenuation:true}));pets.frustumCulled=false;S.add(pets);
 /* ---------- player ---------- */
 const keys={};let yaw=0,pitch=0,locked=false,started=false,drag=false,fly=false,jumps=0,grounded=false,bob=0,t=0,frame=0,cameraReady=false,cameraBob=0,cameraRoll=0,landingImpulse=0,cameraTurn=0;const cameraPosition=new T.Vector3(),cameraTarget=new T.Vector3();
+const mobileStick={x:0,y:0},touchState={jump:false,sprint:false,down:false};
+const touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;
+let stickPointer=null,lookPointer=null,lookLastX=0,lookLastY=0;
 const pos=new T.Vector3(),vel=new T.Vector3();
 for(let r=0;r<600;r+=10){let f=false;for(let a=0;a<8;a++){const x=Math.cos(a)*r,z=Math.sin(a)*r;if(hf(x,z)>3){pos.set(x,hf(x,z),z);f=true;break}}if(f)break}
 addEventListener('keydown',e=>{keys[e.code]=1;if(e.code==='KeyF')fly=!fly;if(e.code==='Space'&&!e.repeat&&!fly){if(grounded||jumps<2){vel.y=9.5;if(!grounded)jumps++;grounded=false}}if(e.code==='Space')e.preventDefault()});
 addEventListener('keyup',e=>keys[e.code]=0);
-const ui=document.getElementById('ui');
-ui.onclick=()=>{started=true;ui.style.display='none';try{R.domElement.requestPointerLock()}catch(e){}};
-document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===R.domElement;if(!locked&&started)ui.style.display='flex'});
+const ui=document.getElementById('ui'),mobileControls=document.getElementById('mobileControls');
+const leftStick=document.getElementById('leftStick'),stickKnob=document.getElementById('stickKnob'),lookZone=document.getElementById('lookZone');
+const jumpButton=document.getElementById('jumpButton'),flyButton=document.getElementById('flyButton'),fireButton=document.getElementById('fireButton'),sprintButton=document.getElementById('sprintButton');
+function beginGame(){
+ started=true;document.body.classList.add('playing');ui.style.display='none';
+ if(touchMode){mobileControls.classList.add('active');try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch(e){}
+  try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch(e){}
+ }else{try{R.domElement.requestPointerLock()}catch(e){}}
+}
+ui.onclick=beginGame;
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===R.domElement;if(!locked&&started&&!touchMode)ui.style.display='flex'});
 addEventListener('mousemove',e=>{if(locked||drag){yaw-=e.movementX*.0022;pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*.0022));cameraTurn=Math.max(-.055,Math.min(.055,cameraTurn-e.movementX*.000045))}});
-addEventListener('mousedown',e=>{if(!started)return;if(locked)shoot();else drag=true});addEventListener('mouseup',()=>drag=false);
+addEventListener('mousedown',e=>{if(!started||touchMode)return;if(locked)shoot();else drag=true});addEventListener('mouseup',()=>drag=false);
+function updateStick(e){
+ const r=leftStick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.31;
+ let dx=e.clientX-cx,dy=e.clientY-cy,mag=Math.hypot(dx,dy);if(mag>max){dx=dx/mag*max;dy=dy/mag*max}
+ const dead=.08,fx=dx/max,fy=dy/max;mobileStick.x=Math.abs(fx)<dead?0:Math.sign(fx)*Math.pow((Math.abs(fx)-dead)/(1-dead),1.15);
+ mobileStick.y=Math.abs(fy)<dead?0:Math.sign(fy)*Math.pow((Math.abs(fy)-dead)/(1-dead),1.15);
+ stickKnob.style.setProperty('--dx',dx+'px');stickKnob.style.setProperty('--dy',dy+'px');
+}
+function resetStick(){stickPointer=null;mobileStick.x=mobileStick.y=0;stickKnob.style.setProperty('--dx','0px');stickKnob.style.setProperty('--dy','0px')}
+leftStick.addEventListener('pointerdown',e=>{if(!started)return;e.preventDefault();stickPointer=e.pointerId;leftStick.setPointerCapture(e.pointerId);updateStick(e)});
+leftStick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){e.preventDefault();updateStick(e)}});
+leftStick.addEventListener('pointerup',e=>{if(e.pointerId===stickPointer)resetStick()});
+leftStick.addEventListener('pointercancel',resetStick);leftStick.addEventListener('lostpointercapture',resetStick);
+lookZone.addEventListener('pointerdown',e=>{if(!started||e.pointerType==='mouse')return;e.preventDefault();lookPointer=e.pointerId;lookLastX=e.clientX;lookLastY=e.clientY;lookZone.setPointerCapture(e.pointerId)});
+lookZone.addEventListener('pointermove',e=>{if(e.pointerId!==lookPointer)return;e.preventDefault();const dx=e.clientX-lookLastX,dy=e.clientY-lookLastY;lookLastX=e.clientX;lookLastY=e.clientY;yaw-=dx*.0042;pitch=Math.max(-1.48,Math.min(1.48,pitch-dy*.0038));cameraTurn=Math.max(-.055,Math.min(.055,cameraTurn-dx*.00008))});
+function releaseLook(e){if(e.pointerId===lookPointer)lookPointer=null}
+lookZone.addEventListener('pointerup',releaseLook);lookZone.addEventListener('pointercancel',releaseLook);lookZone.addEventListener('lostpointercapture',releaseLook);
+jumpButton.addEventListener('pointerdown',e=>{e.preventDefault();touchState.jump=true;jumpButton.classList.add('on');if(!fly&&(grounded||jumps<2)){vel.y=9.5;if(!grounded)jumps++;grounded=false}});
+function releaseJump(){touchState.jump=false;jumpButton.classList.remove('on')}
+jumpButton.addEventListener('pointerup',releaseJump);jumpButton.addEventListener('pointercancel',releaseJump);jumpButton.addEventListener('lostpointercapture',releaseJump);
+sprintButton.addEventListener('pointerdown',e=>{e.preventDefault();touchState.sprint=true;sprintButton.classList.add('on');sprintButton.setPointerCapture(e.pointerId)});
+function releaseSprint(){touchState.sprint=false;sprintButton.classList.remove('on')}
+sprintButton.addEventListener('pointerup',releaseSprint);sprintButton.addEventListener('pointercancel',releaseSprint);sprintButton.addEventListener('lostpointercapture',releaseSprint);
+flyButton.addEventListener('pointerdown',e=>{e.preventDefault();fly=!fly;flyButton.classList.toggle('on',fly);flyButton.textContent=fly?'FLY ON':'FLY OFF'});
+fireButton.addEventListener('pointerdown',e=>{e.preventDefault();if(started)shoot();fireButton.classList.add('on');fireButton.setPointerCapture(e.pointerId)});
+function releaseFire(){fireButton.classList.remove('on')}
+fireButton.addEventListener('pointerup',releaseFire);fireButton.addEventListener('pointercancel',releaseFire);fireButton.addEventListener('lostpointercapture',releaseFire);
+addEventListener('contextmenu',e=>{if(touchMode)e.preventDefault()});
+
 addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix()});
 function treeCollide(p,rad){const pcx=Math.floor(p.x/CS),pcz=Math.floor(p.z/CS);for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const c=chunks.get((pcx+a)+','+(pcz+b));if(!c)continue;for(const q of c.tr){if(p.y>q.t)continue;const dx=p.x-q.x,dz=p.z-q.z,d=Math.hypot(dx,dz),m=q.r+rad;if(d<m&&d>1e-4){p.x=q.x+dx/d*m;p.z=q.z+dz/d*m}}}}
 function updPlayer(dt){
-const fw=(keys.KeyW?1:0)-(keys.KeyS?1:0),st=(keys.KeyD?1:0)-(keys.KeyA?1:0),sy=Math.sin(yaw),cy=Math.cos(yaw),sp=keys.ShiftLeft||keys.ShiftRight;
+let fw=(keys.KeyW?1:0)-(keys.KeyS?1:0)-mobileStick.y,st=(keys.KeyD?1:0)-(keys.KeyA?1:0)+mobileStick.x;const inputLen=Math.hypot(fw,st);if(inputLen>1){fw/=inputLen;st/=inputLen;}const sy=Math.sin(yaw),cy=Math.cos(yaw),sp=keys.ShiftLeft||keys.ShiftRight||touchState.sprint;
 if(fly){const cp=Math.cos(pitch),k=sp?400:45;const fx=-sy*cp,fy=Math.sin(pitch),fz=-cy*cp;
-vel.x+=((fx*fw+cy*st)*k-vel.x)*Math.min(1,dt*6);vel.y+=(fy*fw*k+((keys.Space?1:0)-(keys.KeyC?1:0))*k*.6-vel.y)*Math.min(1,dt*6);vel.z+=((fz*fw-sy*st)*k-vel.z)*Math.min(1,dt*6);
+vel.x+=((fx*fw+cy*st)*k-vel.x)*Math.min(1,dt*6);vel.y+=(fy*fw*k+(((keys.Space||touchState.jump)?1:0)-((keys.KeyC||touchState.down)?1:0))*k*.6-vel.y)*Math.min(1,dt*6);vel.z+=((fz*fw-sy*st)*k-vel.z)*Math.min(1,dt*6);
 pos.addScaledVector(vel,dt);const gh=hf(pos.x,pos.z);if(pos.y<gh)pos.y=gh;grounded=false;return}
 const gh0=hf(pos.x,pos.z),wade=pos.y<0&&gh0<0?.55:1,spd=(sp?15:7.5)*wade,tx=(-sy*fw+cy*st)*spd,tz=(-cy*fw-sy*st)*spd,k=Math.min(1,dt*(grounded?12:3));
 vel.x+=(tx-vel.x)*k;vel.z+=(tz-vel.z)*k;vel.y-=24*dt;
-if(!grounded&&keys.Space&&vel.y<-3.5)vel.y=-3.5;
+if(!grounded&&(keys.Space||touchState.jump)&&vel.y<-3.5)vel.y=-3.5;
 pos.addScaledVector(vel,dt);treeCollide(pos,.4);
 const gh=hf(pos.x,pos.z);if(pos.y<=gh&&vel.y<=0){pos.y=gh;vel.y=0;grounded=true;jumps=0}else grounded=pos.y<=gh+.05&&vel.y<=0;
 if(grounded)bob+=Math.hypot(vel.x,vel.z)*dt*.9}
