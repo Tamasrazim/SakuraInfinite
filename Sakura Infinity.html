@@ -76,12 +76,12 @@ function periodicNoise(u,v,cells,seed){const x=((u%1)+1)%1*cells,y=((v%1)+1)%1*c
 function tileFbm(u,v,seed){return periodicNoise(u,v,4,seed)*.32+periodicNoise(u,v,8,seed+1)*.24+periodicNoise(u,v,16,seed+2)*.18+periodicNoise(u,v,32,seed+3)*.12+periodicNoise(u,v,64,seed+4)*.09+periodicNoise(u,v,128,seed+5)*.05}
 function setupTexture(tex,encoding){tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.encoding=encoding;tex.anisotropy=Math.min(8,R.capabilities.getMaxAnisotropy());tex.generateMipmaps=true;tex.minFilter=T.LinearMipmapLinearFilter;tex.magFilter=T.LinearFilter;tex.needsUpdate=true;return tex}
 function biomeTexture(kind,size=256){
- const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d'),img=ctx.createImageData(size,size),seed={grass:11,rock:23,sand:37,snow:53}[kind];
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=size;const ctx=canvas.getContext('2d'),img=ctx.createImageData(size,size),seed={grass:11,rock:23,sand:37,snow:53,blossom:67}[kind];
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size,v=y/size,i=(y*size+x)*4,n=tileFbm(u,v,seed),fine=periodicNoise(u,v,192,seed+7),grain=periodicNoise(u,v,256,seed+19),vein=Math.max(0,1-Math.abs(periodicNoise(u,v,38,seed+31)-.5)*22);let rr,gg,bb;
  if(kind==='grass'){const patch=Math.max(0,Math.min(1,(n-.43)*2.9));rr=33+n*27+fine*8+grain*5;gg=66+n*65+fine*13+patch*10;bb=24+n*23+fine*7}
  else if(kind==='rock'){const strata=Math.sin(v*6.2831853*11+Math.sin(u*6.2831853*5)*1.5)*5;rr=62+n*66+fine*13+strata+vein*9;gg=61+n*63+fine*13+strata+vein*8;bb=57+n*59+fine*12+strata+vein*7}
  else if(kind==='sand'){rr=123+n*42+fine*11+grain*8;gg=102+n*40+fine*10+grain*7;bb=72+n*33+fine*8+grain*6}
- else{const grit=(fine-.5)*15;rr=191+n*48+grit;gg=205+n*39+grit;bb=218+n*32+grit}
+ else if(kind==='blossom'){const bloom=Math.max(0,Math.min(1,(periodicNoise(u,v,48,seed+41)-.36)*4.2)),petal=Math.max(0,Math.min(1,(periodicNoise(u,v,96,seed+43)-.55)*4.5)),shade=(n-.5)*25;rr=75+shade+bloom*(115+petal*54);gg=42+shade*.6+bloom*(52+petal*112);bb=47+shade*.8+bloom*(70+petal*145)}else{const grit=(fine-.5)*15;rr=191+n*48+grit;gg=205+n*39+grit;bb=218+n*32+grit}
  img.data[i]=Math.max(0,Math.min(255,rr));img.data[i+1]=Math.max(0,Math.min(255,gg));img.data[i+2]=Math.max(0,Math.min(255,bb));img.data[i+3]=255}
  ctx.putImageData(img,0,0);return setupTexture(new T.CanvasTexture(canvas),T.SRGBEncoding)}
 function detailTextureSet(size=512){
@@ -95,7 +95,7 @@ function barkTextureSet(size=256){
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size,v=y/size,i=(y*size+x)*4,n=tileFbm(u,v,101),ridges=Math.sin(u*6.2831853*29+Math.sin(v*6.2831853*5)*1.4)+.35*Math.sin(u*6.2831853*61+v*6.2831853*7);h[y*size+x]=118+ridges*30+n*33;img.data[i]=Math.max(18,Math.min(255,72+n*47+ridges*8));img.data[i+1]=Math.max(12,Math.min(255,39+n*30+ridges*5));img.data[i+2]=Math.max(8,Math.min(255,25+n*19+ridges*3));img.data[i+3]=255}
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const i=(y*size+x)*4,at=(xx,yy)=>h[((yy+size)%size)*size+((xx+size)%size)];let nx=-(at(x+1,y)-at(x-1,y))*.035,ny=-(at(x,y+1)-at(x,y-1))*.035,nz=1,l=Math.hypot(nx,ny,nz);nx/=l;ny/=l;nz/=l;ni.data[i]=(nx*.5+.5)*255;ni.data[i+1]=(ny*.5+.5)*255;ni.data[i+2]=(nz*.5+.5)*255;ni.data[i+3]=255}
  ctx.putImageData(img,0,0);nctx.putImageData(ni,0,0);return {map:setupTexture(new T.CanvasTexture(c),T.SRGBEncoding),normalMap:setupTexture(new T.CanvasTexture(nc),T.LinearEncoding)}}
-function groundTextureSet(){return {...detailTextureSet(512),grass:biomeTexture('grass'),rock:biomeTexture('rock'),sand:biomeTexture('sand'),snow:biomeTexture('snow'),bark:barkTextureSet()}}
+function groundTextureSet(){return {...detailTextureSet(512),grass:biomeTexture('grass'),rock:biomeTexture('rock'),sand:biomeTexture('sand'),snow:biomeTexture('snow'),blossom:biomeTexture('blossom'),bark:barkTextureSet()}}
 const groundMaps=groundTextureSet(),CS=64,SG=48,CR=6,chunks=new Map();
 const tmat=new T.MeshStandardMaterial({map:groundMaps.grass,normalMap:groundMaps.normalMap,normalScale:new T.Vector2(.62,.62),roughnessMap:groundMaps.roughnessMap,roughness:.96,metalness:0});
 tmat.onBeforeCompile=shader=>{shader.uniforms.uGrassTex={value:groundMaps.grass};shader.uniforms.uRockTex={value:groundMaps.rock};shader.uniforms.uSandTex={value:groundMaps.sand};shader.uniforms.uSnowTex={value:groundMaps.snow};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute vec4 biome; varying vec4 vBiome; varying vec2 vTerrainUv;').replace('#include <begin_vertex>','#include <begin_vertex>\nvBiome=biome; vTerrainUv=uv;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nuniform sampler2D uGrassTex; uniform sampler2D uRockTex; uniform sampler2D uSandTex; uniform sampler2D uSnowTex; varying vec4 vBiome; varying vec2 vTerrainUv;').replace('#include <map_fragment>','#include <map_fragment>\nvec3 bg=pow(max(texture2D(uGrassTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 br=pow(max(texture2D(uRockTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 bs=pow(max(texture2D(uSandTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); vec3 bw=pow(max(texture2D(uSnowTex,vTerrainUv).rgb,vec3(0.001)),vec3(2.2)); float total=max(dot(vBiome,vec4(1.0)),0.0001); diffuseColor.rgb=(bg*vBiome.x+br*vBiome.y+bs*vBiome.z+bw*vBiome.w)/total;');};
@@ -103,12 +103,12 @@ tmat.customProgramCacheKey=()=>'sakura-pbr-biome-v3';
 const cylB=new T.CylinderGeometry(1,1,1,12).translate(0,.5,0),trunkG=new T.CylinderGeometry(.76,1,1,10).translate(0,.5,0),canG=new T.SphereGeometry(1,16,12),boxG=new T.BoxGeometry(1,1,1),sph=new T.SphereGeometry(1,12,8);
 canG.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(canG.attributes.position.count*3).fill(1),3));
 const trunkM=new T.MeshStandardMaterial({map:groundMaps.bark.map,normalMap:groundMaps.bark.normalMap,normalScale:new T.Vector2(.55,.8),roughness:.96});
-const canM=new T.MeshStandardMaterial({color:0xffffff,roughness:.92,vertexColors:true}),glowM=new T.MeshStandardMaterial({color:0xffd58a,emissive:0xffb94e,emissiveIntensity:1.2,roughness:.3});
+const canM=new T.MeshStandardMaterial({color:0xffffff,map:groundMaps.blossom,roughness:.91,vertexColors:true}),glowM=new T.MeshStandardMaterial({color:0xffd58a,emissive:0xffb94e,emissiveIntensity:1.2,roughness:.3});
 function makeGrassGeometry(){const p=[],uv=[],idx=[],levels=[[0,.13],[.32,.09],[.7,.035]],angles=[0,Math.PI/3,Math.PI*2/3],height=.72;for(const angle of angles){const base=p.length/3,c=Math.cos(angle),sn=Math.sin(angle);levels.forEach(([y,w])=>{for(const side of [-1,1]){const x=side*w,z=0;p.push(x*c+z*sn,y*height,-x*sn+z*c);uv.push(side<0?0:1,y)}});for(let row=0;row<levels.length-1;row++){const a=base+row*2,b=a+1,c=a+2,d=a+3;idx.push(a,c,b,b,c,d)}}const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(p.length).fill(1),3));return g}
 const grassG=makeGrassGeometry(),grassM=new T.MeshStandardMaterial({color:0xffffff,roughness:1,vertexColors:true,side:T.DoubleSide});
-function addInstancedWind(material,kind){material.onBeforeCompile=shader=>{shader.uniforms.uWindTime={value:0};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float uWindTime;');const displacement=kind==='grass'?'float gust=sin(uWindTime*1.7+instanceMatrix[3].x*.17+instanceMatrix[3].z*.13+position.y*2.0); transformed.x+=gust*position.y*.23; transformed.z+=cos(uWindTime*1.13+instanceMatrix[3].x*.09)*position.y*.10;':'float sway=sin(uWindTime*.62+instanceMatrix[3].x*.018+instanceMatrix[3].z*.021); transformed.x+=sway*max(position.y,0.0)*.045;';shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\n'+displacement+'\n#endif');material.userData.windShader=shader};material.customProgramCacheKey=()=> 'sakura-wind-'+kind+'-v1'}
+function addInstancedWind(material,kind){material.onBeforeCompile=shader=>{shader.uniforms.uWindTime={value:0};shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nuniform float uWindTime;');const displacement=kind==='grass'?'float gust=sin(uWindTime*1.7+(modelMatrix[3].x+instanceMatrix[3].x)*.17+(modelMatrix[3].z+instanceMatrix[3].z)*.13+position.y*2.0); transformed.x+=gust*position.y*.23; transformed.z+=cos(uWindTime*1.13+(modelMatrix[3].x+instanceMatrix[3].x)*.09)*position.y*.10;':'float sway=sin(uWindTime*.62+(modelMatrix[3].x+instanceMatrix[3].x)*.018+(modelMatrix[3].z+instanceMatrix[3].z)*.021); transformed.x+=sway*max(position.y,0.0)*.045;';shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n#ifdef USE_INSTANCING\n'+displacement+'\n#endif');material.userData.windShader=shader};material.customProgramCacheKey=()=> 'sakura-wind-'+kind+'-v1'}
 addInstancedWind(canM,'canopy');addInstancedWind(grassM,'grass');
-const rockG=new T.DodecahedronGeometry(1,1),rockM=new T.MeshStandardMaterial({color:0x8d8a80,roughness:.99,flatShading:true});
+const rockG=new T.DodecahedronGeometry(1,1),rockM=new T.MeshStandardMaterial({color:0xffffff,map:groundMaps.rock,normalMap:groundMaps.normalMap,normalScale:new T.Vector2(.72,.72),roughness:.99,flatShading:true});
 
 function part(g,m,s,p,par){const o=new T.Mesh(g,m);o.scale.set(...s);o.position.set(...p);o.castShadow=true;o.receiveShadow=true;par.add(o);return o}
 const gate=new T.Group(),redM=M(0xe63a4d),blkM=M(0x2a1830);
@@ -169,9 +169,9 @@ grass.castShadow=false;grass.receiveShadow=false;grp.add(grass);
 const rockCount=34,rocks=new T.InstancedMesh(rockG,rockM,rockCount);
 for(let i=0;i<rockCount;i++){
  const lx=(r()-.5)*CS,lz=(r()-.5)*CS,h=hf(lx+ox,lz+oz);
- const sz=.18+r()*1.15;
- D.position.set(lx,h+sz*.18,lz);D.rotation.set((r()-.5)*.45,r()*6.28,(r()-.5)*.45);
- D.scale.set(sz*(.65+r()*.8),sz*(.28+r()*.55),sz*(.65+r()*.7));D.updateMatrix();rocks.setMatrixAt(i,D.matrix);
+ const sz=.18+r()*1.15,rx=sz*(.65+r()*.8),ry=sz*(.28+r()*.55),rz=sz*(.65+r()*.7);
+ D.position.set(lx+((r()-.5)*.25),h+ry*.78,lz+((r()-.5)*.25));D.rotation.set((r()-.5)*.45,r()*6.28,(r()-.5)*.45);
+ D.scale.set(rx,ry,rz);D.updateMatrix();rocks.setMatrixAt(i,D.matrix);
 }
 rocks.castShadow=true;rocks.receiveShadow=true;grp.add(rocks);
 if(r()<.22){const lx=(r()-.5)*40,lz=(r()-.5)*40,h=hf(lx+ox,lz+oz);if(h>2&&ok(lx+ox,lz+oz,h)){const q=gate.clone();q.position.set(lx,h,lz);q.scale.setScalar(2+r()*3);q.rotation.y=r()*6.28;grp.add(q)}}
@@ -220,7 +220,14 @@ const waterMaterial=new T.ShaderMaterial({
 const water=new T.Mesh(waterGeometry,waterMaterial);water.rotation.x=-Math.PI/2;water.position.y=-12;water.receiveShadow=true;S.add(water);
 /* petals */
 const PN=2200,pp=new Float32Array(PN*3);for(let i=0;i<PN*3;i++)pp[i]=(Math.random()-.5)*75;
-const cv=document.createElement('canvas');cv.width=cv.height=32;const cx2=cv.getContext('2d'),gr=cx2.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#fff');gr.addColorStop(1,'rgba(255,255,255,0)');cx2.fillStyle=gr;cx2.fillRect(0,0,32,32);
+const cv=document.createElement('canvas');cv.width=cv.height=64;
+const cx2=cv.getContext('2d'),petalGradient=cx2.createLinearGradient(0,5,0,58);
+petalGradient.addColorStop(0,'rgba(255,247,251,0)');petalGradient.addColorStop(.20,'rgba(255,226,239,.96)');
+petalGradient.addColorStop(.72,'rgba(250,163,194,1)');petalGradient.addColorStop(1,'rgba(228,107,160,.12)');
+cx2.translate(32,32);cx2.beginPath();cx2.moveTo(0,-28);cx2.bezierCurveTo(13,-22,24,-9,16,9);
+cx2.bezierCurveTo(11,22,4,28,0,29);cx2.bezierCurveTo(-5,26,-17,14,-17,0);
+cx2.bezierCurveTo(-17,-14,-8,-24,0,-28);cx2.closePath();cx2.fillStyle=petalGradient;cx2.fill();
+cx2.strokeStyle='rgba(255,244,250,.46)';cx2.lineWidth=1;cx2.beginPath();cx2.moveTo(0,-23);cx2.quadraticCurveTo(1,4,0,24);cx2.stroke();
 const petG=new T.BufferGeometry();petG.setAttribute('position',new T.BufferAttribute(pp,3));
 const pets=new T.Points(petG,new T.PointsMaterial({color:0xf8c8d8,size:.28,map:new T.CanvasTexture(cv),transparent:true,depthWrite:false,sizeAttenuation:true}));pets.frustumCulled=false;S.add(pets);
 /* ---------- player ---------- */
