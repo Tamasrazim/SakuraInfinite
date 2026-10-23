@@ -14,12 +14,56 @@ canvas{display:block}
 #toast{position:fixed;top:22%;left:50%;transform:translateX(-50%);color:#fff;font:600 20px system-ui;text-shadow:0 2px 8px #000;pointer-events:none;opacity:0;transition:opacity .6s;text-align:center}
 #vg{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.32))}
 #x{position:fixed;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;background:#fff;opacity:.6;pointer-events:none}
+#mobileControls{display:none;position:fixed;inset:0;z-index:20;pointer-events:none;touch-action:none;font:700 11px/1 system-ui,sans-serif;color:#fff;user-select:none;-webkit-user-select:none}
+#mobileControls.active{display:block}
+#lookZone{position:absolute;inset:0 0 0 38%;z-index:0;pointer-events:auto;touch-action:none}
+#leftStick{position:absolute;left:max(16px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));width:144px;height:144px;border:1px solid #ffffff8a;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12),rgba(7,18,26,.24) 65%,rgba(255,255,255,.06));box-shadow:inset 0 0 24px #0004,0 4px 22px #0005;pointer-events:auto;touch-action:none;z-index:2}
+#leftStick:before{content:"";position:absolute;inset:19px;border:1px dashed #ffffff3b;border-radius:50%}
+#stickKnob{position:absolute;left:50%;top:50%;width:61px;height:61px;border:1px solid #ffffffc0;border-radius:50%;background:radial-gradient(circle at 32% 24%,#ffffff87,#a7c5d25e 44%,#10232db8);box-shadow:0 5px 18px #0008;transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,0px)));pointer-events:none}
+#stickLabel{position:absolute;left:0;right:0;bottom:6px;text-align:center;font:9px monospace;letter-spacing:.18em;color:#ffffffb0;pointer-events:none}
+#mobileActions{position:absolute;right:max(14px,env(safe-area-inset-right));bottom:max(15px,env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(2,58px);gap:9px;z-index:3;pointer-events:auto}
+.mobileAction{width:58px;height:58px;border:1px solid #ffffff91;border-radius:50%;background:radial-gradient(circle at 34% 22%,#ffffff50,#16303bbb 73%);color:#fff;box-shadow:0 5px 18px #0007,inset 0 1px 0 #ffffff55;touch-action:none;display:grid;place-items:center;letter-spacing:.07em;font-size:9px;padding:0;outline:none;-webkit-tap-highlight-color:transparent}
+.mobileAction:active,.mobileAction.on{background:radial-gradient(circle at 35% 25%,#ffffff85,#417a91ed 78%);border-color:#fff}
+#touchHint{position:absolute;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);white-space:nowrap;color:#ffffffc5;font:9px monospace;letter-spacing:.12em;text-shadow:0 1px 5px #000;pointer-events:none}
+#rotateNotice{display:none;position:fixed;inset:0;z-index:40;background:#091117;color:#fff;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:28px;font-family:system-ui,sans-serif}
+#rotateNotice strong{font-size:clamp(22px,5vw,34px);letter-spacing:.08em}
+#rotateNotice span{margin-top:12px;max-width:310px;color:#c4d1d9;line-height:1.65;font-size:14px}
+#rotateIcon{font-size:58px;margin-bottom:18px;animation:rotatePhone 2s ease-in-out infinite}
+@keyframes rotatePhone{0%,12%{transform:rotate(0)}58%,82%,100%{transform:rotate(90deg)}}
+@media (orientation:landscape) and (max-height:520px){
+ #leftStick{width:118px;height:118px;bottom:max(10px,env(safe-area-inset-bottom))}
+ #stickKnob{width:52px;height:52px}
+ #mobileActions{grid-template-columns:repeat(2,52px);gap:7px;bottom:max(10px,env(safe-area-inset-bottom))}
+ .mobileAction{width:52px;height:52px}
+ #mm{width:88px;height:88px;top:max(8px,env(safe-area-inset-top));bottom:auto;right:max(8px,env(safe-area-inset-right))}
+ #cp{top:max(8px,env(safe-area-inset-top))}
+}
+@media (orientation:portrait) and (max-width:950px){
+ body.playing #rotateNotice{display:flex}
+ body.playing #mobileControls{visibility:hidden}
+ body.playing #hud,body.playing #mm,body.playing #cp,body.playing #x{visibility:hidden}
+}
+@media (hover:none) and (pointer:coarse){#ui p#deskInstructions{display:none}}
 </style></head><body>
 <div id="ui"><h1>REALM OF RIVERS</h1>
 <p>An endless landscape of rivers, lakes, wind-swept grass, leafy forests, villages and towns.</p>
-<p><b>WASD</b> walk · <b>Shift</b> run · <b>Space</b> jump (or fly up) · <b>F</b> fly mode · swim by walking into deep water</p>
+<p id="deskInstructions"><b>WASD</b> walk · <b>Shift</b> run · <b>Space</b> jump (or fly up) · <b>F</b> fly mode · swim by walking into deep water</p>
+<p id="touchInstructions" style="display:none">Left joystick to move · drag the right side to look · JUMP / RUN / FLY / DOWN on-screen controls</p>
 <p>Follow the compass to glowing relics, discover villages and towns, and collect them all.</p><p style="margin-top:14px;font-size:20px">Click to begin</p></div>
-<canvas id="mm" width="144" height="144"></canvas><div id="cp"><span>▲</span><div></div></div><div id="toast"></div><div id="vg"></div><div id="x"></div><div id="hud"></div>
+<canvas id="mm" width="144" height="144"></canvas>
+<div id="mobileControls" aria-label="Touch controls">
+ <div id="lookZone" aria-label="Drag right side to look around"></div>
+ <div id="leftStick" aria-label="Movement joystick"><div id="stickKnob"></div><div id="stickLabel">MOVE</div></div>
+ <div id="mobileActions">
+  <button class="mobileAction" id="jumpButton" type="button">JUMP</button>
+  <button class="mobileAction" id="runButton" type="button">RUN</button>
+  <button class="mobileAction" id="flyButton" type="button">FLY OFF</button>
+  <button class="mobileAction" id="downButton" type="button">DOWN</button>
+ </div>
+ <div id="touchHint">DRAG RIGHT SIDE TO LOOK</div>
+</div>
+<div id="rotateNotice"><div id="rotateIcon" aria-hidden="true">▱</div><strong>ROTATE TO LANDSCAPE</strong><span>Turn your phone sideways to explore Realm of Rivers. The world is designed for horizontal gameplay.</span></div>
+<div id="cp"><span>▲</span><div></div></div><div id="toast"></div><div id="vg"></div><div id="x"></div><div id="hud"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 const T=THREE;
@@ -193,22 +237,65 @@ for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const v=vcell(pcx+a,pcz+b);if(v&&!v
 for(const[k,o]of vb){const[a,b]=k.split(',').map(Number);if(Math.abs(a-pcx)>2||Math.abs(b-pcz)>2){S.remove(o.g);vb.delete(k)}}}
 /* ---------- player ---------- */
 const keys={};let yaw=0,pitch=0,locked=false,started=false,drag=false,fly=false,grounded=false,bob=0,t=0,frame=0,bobA=0,lean=0,dip=0,dv=0,fovC=70,swimming=false;
+const mobileStick={x:0,y:0},touchState={jump:false,run:false,down:false};const touchMode=('ontouchstart' in window)||navigator.maxTouchPoints>0||matchMedia('(pointer:coarse)').matches;let stickPointer=null,lookPointer=null,lookLastX=0,lookLastY=0;
 const pos=new T.Vector3(),vel=new T.Vector3();
 for(let r=0;r<900;r+=10){let f=false;for(let a=0;a<12&&!f;a++){const x=Math.cos(a)*r,z=Math.sin(a)*r,h=hf(x,z);if(h>4&&h<25){pos.set(x,h,z);f=true}}if(f)break}
-addEventListener('keydown',e=>{keys[e.code]=1;if(e.code==='KeyF')fly=!fly;if(e.code==='Space'){e.preventDefault();if(!fly&&grounded&&!e.repeat){vel.y=6.5;grounded=false}}});
+addEventListener('keydown',e=>{keys[e.code]=1;if(e.code==='KeyF'){fly=!fly;syncFlyButton()}if(e.code==='Space'){e.preventDefault();if(!fly&&grounded&&!e.repeat){vel.y=6.5;grounded=false}}});
 addEventListener('keyup',e=>keys[e.code]=0);
-const ui=document.getElementById('ui');
-ui.onclick=()=>{started=true;initAudio();ui.style.display='none';try{R.domElement.requestPointerLock()}catch(e){}};
-document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===R.domElement;if(!locked&&started)ui.style.display='flex'});
+const ui=document.getElementById('ui'),mobileControls=document.getElementById('mobileControls');
+const leftStick=document.getElementById('leftStick'),stickKnob=document.getElementById('stickKnob'),lookZone=document.getElementById('lookZone');
+const jumpButton=document.getElementById('jumpButton'),runButton=document.getElementById('runButton'),flyButton=document.getElementById('flyButton'),downButton=document.getElementById('downButton');
+const touchInstructions=document.getElementById('touchInstructions');
+if(touchMode)touchInstructions.style.display='block';
+function beginGame(){
+ started=true;document.body.classList.add('playing');initAudio();ui.style.display='none';
+ if(touchMode){
+  mobileControls.classList.add('active');
+  try{document.documentElement.requestFullscreen?.().catch(()=>{});}catch(e){}
+  try{screen.orientation?.lock?.('landscape').catch(()=>{});}catch(e){}
+ }else{try{R.domElement.requestPointerLock()}catch(e){}}
+}
+ui.onclick=beginGame;
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===R.domElement;if(!locked&&started&&!touchMode)ui.style.display='flex'});
 addEventListener('mousemove',e=>{if(locked||drag){yaw-=e.movementX*.0022;pitch=Math.max(-1.5,Math.min(1.5,pitch-e.movementY*.0022))}});
-addEventListener('mousedown',()=>{if(started&&!locked)drag=true});addEventListener('mouseup',()=>drag=false);
+addEventListener('mousedown',()=>{if(started&&!locked&&!touchMode)drag=true});addEventListener('mouseup',()=>drag=false);
+function updateStick(e){
+ const r=leftStick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.32;
+ let dx=e.clientX-cx,dy=e.clientY-cy,mag=Math.hypot(dx,dy);if(mag>max){dx=dx/mag*max;dy=dy/mag*max}
+ const dead=.075,fx=dx/max,fy=dy/max;
+ mobileStick.x=Math.abs(fx)<dead?0:Math.sign(fx)*Math.pow((Math.abs(fx)-dead)/(1-dead),1.1);
+ mobileStick.y=Math.abs(fy)<dead?0:Math.sign(fy)*Math.pow((Math.abs(fy)-dead)/(1-dead),1.1);
+ stickKnob.style.setProperty('--dx',dx+'px');stickKnob.style.setProperty('--dy',dy+'px');
+}
+function resetStick(){stickPointer=null;mobileStick.x=mobileStick.y=0;stickKnob.style.setProperty('--dx','0px');stickKnob.style.setProperty('--dy','0px')}
+leftStick.addEventListener('pointerdown',e=>{if(!started)return;e.preventDefault();stickPointer=e.pointerId;leftStick.setPointerCapture(e.pointerId);updateStick(e)});
+leftStick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){e.preventDefault();updateStick(e)}});
+leftStick.addEventListener('pointerup',e=>{if(e.pointerId===stickPointer)resetStick()});
+leftStick.addEventListener('pointercancel',resetStick);leftStick.addEventListener('lostpointercapture',resetStick);
+lookZone.addEventListener('pointerdown',e=>{if(!started||e.pointerType==='mouse')return;e.preventDefault();lookPointer=e.pointerId;lookLastX=e.clientX;lookLastY=e.clientY;lookZone.setPointerCapture(e.pointerId)});
+lookZone.addEventListener('pointermove',e=>{if(e.pointerId!==lookPointer)return;e.preventDefault();const dx=e.clientX-lookLastX,dy=e.clientY-lookLastY;lookLastX=e.clientX;lookLastY=e.clientY;yaw-=dx*.0042;pitch=Math.max(-1.48,Math.min(1.48,pitch-dy*.0038))});
+function releaseLook(e){if(e.pointerId===lookPointer)lookPointer=null}
+lookZone.addEventListener('pointerup',releaseLook);lookZone.addEventListener('pointercancel',releaseLook);lookZone.addEventListener('lostpointercapture',releaseLook);
+jumpButton.addEventListener('pointerdown',e=>{e.preventDefault();touchState.jump=true;jumpButton.classList.add('on');if(!fly&&grounded){vel.y=6.5;grounded=false}});
+function releaseJump(){touchState.jump=false;jumpButton.classList.remove('on')}
+jumpButton.addEventListener('pointerup',releaseJump);jumpButton.addEventListener('pointercancel',releaseJump);jumpButton.addEventListener('lostpointercapture',releaseJump);
+runButton.addEventListener('pointerdown',e=>{e.preventDefault();touchState.run=true;runButton.classList.add('on');runButton.setPointerCapture(e.pointerId)});
+function releaseRun(){touchState.run=false;runButton.classList.remove('on')}
+runButton.addEventListener('pointerup',releaseRun);runButton.addEventListener('pointercancel',releaseRun);runButton.addEventListener('lostpointercapture',releaseRun);
+function syncFlyButton(){flyButton.classList.toggle('on',fly);flyButton.textContent=fly?'FLY ON':'FLY OFF'}
+flyButton.addEventListener('pointerdown',e=>{e.preventDefault();fly=!fly;syncFlyButton()});
+downButton.addEventListener('pointerdown',e=>{e.preventDefault();touchState.down=true;downButton.classList.add('on');downButton.setPointerCapture(e.pointerId)});
+function releaseDown(){touchState.down=false;downButton.classList.remove('on')}
+downButton.addEventListener('pointerup',releaseDown);downButton.addEventListener('pointercancel',releaseDown);downButton.addEventListener('lostpointercapture',releaseDown);
+addEventListener('contextmenu',e=>{if(touchMode)e.preventDefault()});
+
 addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix()});
 function collide(p){const pcx=Math.floor(p.x/CS),pcz=Math.floor(p.z/CS);
 for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const c=chunks.get((pcx+a)+','+(pcz+b));if(!c)continue;for(const q of c.tr)push(p,q,.4)}
 for(const o of vb.values())for(const q of o.hl)if(Math.abs(q.x-p.x)<20&&Math.abs(q.z-p.z)<20)push(p,q,.4)}
 function push(p,q,rad){if(p.y>q.t)return;const dx=p.x-q.x,dz=p.z-q.z,d=Math.hypot(dx,dz),m=q.r+rad;if(d<m&&d>1e-4){p.x=q.x+dx/d*m;p.z=q.z+dz/d*m}}
-function updPlayer(dt){const fw=(keys.KeyW?1:0)-(keys.KeyS?1:0),st=(keys.KeyD?1:0)-(keys.KeyA?1:0),sy=Math.sin(yaw),cy=Math.cos(yaw),sp=keys.ShiftLeft||keys.ShiftRight;
-if(fly){const cp=Math.cos(pitch),k=sp?300:40,e=Math.min(1,dt*6);vel.x+=((-sy*cp*fw+cy*st)*k-vel.x)*e;vel.y+=(Math.sin(pitch)*fw*k+((keys.Space?1:0)-(keys.KeyC?1:0))*k*.6-vel.y)*e;vel.z+=((-cy*cp*fw-sy*st)*k-vel.z)*e;
+function updPlayer(dt){let fw=(keys.KeyW?1:0)-(keys.KeyS?1:0)-mobileStick.y,st=(keys.KeyD?1:0)-(keys.KeyA?1:0)+mobileStick.x;const il=Math.hypot(fw,st);if(il>1){fw/=il;st/=il}const sy=Math.sin(yaw),cy=Math.cos(yaw),sp=keys.ShiftLeft||keys.ShiftRight||touchState.run;
+if(fly){const cp=Math.cos(pitch),k=sp?300:40,e=Math.min(1,dt*6);vel.x+=((-sy*cp*fw+cy*st)*k-vel.x)*e;vel.y+=(Math.sin(pitch)*fw*k+(((keys.Space||touchState.jump)?1:0)-((keys.KeyC||touchState.down)?1:0))*k*.6-vel.y)*e;vel.z+=((-cy*cp*fw-sy*st)*k-vel.z)*e;
 pos.addScaledVector(vel,dt);const g=hf(pos.x,pos.z)+1;if(pos.y<g)pos.y=g;grounded=false;return}
 const gh=hf(pos.x,pos.z),swim=gh<-1&&pos.y<=.3,spd=swim?2.6:(sp?8.5:4.4),k=Math.min(1,dt*(grounded||swim?10:2.5));
 vel.x+=((-sy*fw+cy*st)*spd-vel.x)*k;vel.z+=((-cy*fw-sy*st)*spd-vel.z)*k;
